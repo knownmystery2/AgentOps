@@ -25,7 +25,6 @@ import com.opensource.autonomous.agent.ui.MainViewModel
 import com.opensource.autonomous.agent.network.LocalWebhookServer
 import com.opensource.autonomous.agent.ui.AdvancedWorkspaceDashboard
 import com.opensource.autonomous.agent.ui.screens.*
-import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     private var webhookServer: LocalWebhookServer? = null
@@ -37,18 +36,7 @@ class MainActivity : ComponentActivity() {
         val db = AppDatabase.getInstance(applicationContext, lifecycleScope)
         val viewModel = MainViewModel(db)
 
-        // 1. Safe, platform-compliant background loop scheduling that works with your worker
-        val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.opensource.autonomous.agent.worker.AgentOrchestrationWorker>(
-            15, TimeUnit.MINUTES
-        ).build()
-        
-        androidx.work.WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-            "AgentAutomationLoop",
-            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
-            workRequest
-        )
-
-        // 2. Start embedded open-source webhook server for incoming tasks/inquiries
+        // Webhook server stays active for local port 8080 traffic management
         webhookServer = LocalWebhookServer(port = 8080, db = db).also { it.start() }
 
         setContent {
