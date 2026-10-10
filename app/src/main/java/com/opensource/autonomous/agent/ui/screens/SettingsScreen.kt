@@ -31,7 +31,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
         Text("System Control Panel", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Dual Layer Interface Global Switcher Toggle
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -46,11 +45,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
         Divider(modifier = Modifier.padding(vertical = 16.dp))
 
         if (!isDevMode) {
-            // ================= GENERAL SETTINGS MATRIX =================
             Text("General Configurations", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text("Master Automation Lifecycle Daemon:")
+            Text("Master Automation Lifecycle开Daemon:")
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 listOf("ACTIVE", "STANDBY", "SLEEP").forEach { state ->
                     FilterChip(
@@ -78,9 +76,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     }
                 }
             }
-
         } else {
-            // ================= ADVANCED DEVELOPER SETTINGS LAYER =================
             Text("Advanced Micro-Orchestrator Enclaves", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(12.dp))
 
