@@ -35,19 +35,10 @@ class MainActivity : ComponentActivity() {
 
         val db = AppDatabase.getInstance(applicationContext, lifecycleScope)
         val viewModel = MainViewModel(db)
-               // Corrected name to match your exact file name in the repository
+        
+        // Corrected name to match your exact file name in the repository
         val agent = com.opensource.autonomous.agent.worker.AgentOrchestrationWorker(applicationContext)
         agent.startAgent()
-     
-        enableEdgeToEdge()
-
-        val db = AppDatabase.getInstance(applicationContext, lifecycleScope)
-        val viewModel = MainViewModel(db)
-
-        // Paste the new code directly right here:
-        val agent = com.opensource.autonomous.agent.worker.AIAgentController(applicationContext)
-        agent.startAgent()
-    }
 
         // Start embedded open-source webhook server for incoming support inquiries
         webhookServer = LocalWebhookServer(port = 8080, db = db).also { it.start() }
