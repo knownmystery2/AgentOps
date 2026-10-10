@@ -1,0 +1,6 @@
+{
+  "name": "AgentOps",
+  "description": "Mobile-first autonomous multi-agent operating system for print-on-demand and dropshipping businesses with local ledger, approval register, and standby pool.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
