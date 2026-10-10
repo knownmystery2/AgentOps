@@ -25,6 +25,11 @@ jobs:
     - name: Generate Gradle Wrapper
       run: gradle wrapper
 
+    - name: Create Fake Keystore Placeholder
+      run: |
+        mkdir -p AgentOps/AgentOps
+        touch AgentOps/AgentOps/debug.keystore
+
     - name: Build Unsigned APK
       run: ./gradlew assembleDebug -x validateSigningDebug
 
