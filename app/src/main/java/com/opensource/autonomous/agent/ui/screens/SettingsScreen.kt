@@ -48,7 +48,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Text("General Configurations", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text("Master Automation Lifecycle开Daemon:")
+            Text("Master Automation Lifecycle Daemon:")
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 listOf("ACTIVE", "STANDBY", "SLEEP").forEach { state ->
                     FilterChip(
