@@ -34,7 +34,7 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
 
         Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-        // --- SECTION 1: MASTER STATE CONTROL ---
+        // --- MASTER STATE CONTROL ---
         Text("Master Daemon State Control", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         
@@ -54,7 +54,7 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- SECTION 2: CRON INTERVAL SCHEDULER ---
+        // --- CRON INTERVAL SCHEDULER ---
         Text("Cron Schedule Dispatch Interval", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         
@@ -91,7 +91,7 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
             Text("Trigger Manual Dispatch Loop Now")
         }
 
-        // --- SECTION 3: ADVANCED RUNTIME THROTTLING ---
+        // --- ADVANCED RUNTIME THROTTLING ---
         if (isDevMode) {
             Divider(modifier = Modifier.padding(vertical = 24.dp))
             Text("Advanced Resource Throttling", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
