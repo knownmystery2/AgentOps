@@ -42,14 +42,24 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf("ACTIVE", "STANDBY", "SLEEP").forEach { state ->
-                ElevatedFilterChip(
-                    selected = daemonState == state,
-                    onClick = { viewModel.updateDaemonState(state) },
-                    label = { Text(state) },
-                    modifier = Modifier.weight(1fr)
-                )
-            }
+            ElevatedFilterChip(
+                selected = (daemonState == "ACTIVE"),
+                onClick = { viewModel.updateDaemonState("ACTIVE") },
+                label = { Text("ACTIVE") },
+                modifier = Modifier.weight(1fr)
+            )
+            ElevatedFilterChip(
+                selected = (daemonState == "STANDBY"),
+                onClick = { viewModel.updateDaemonState("STANDBY") },
+                label = { Text("STANDBY") },
+                modifier = Modifier.weight(1fr)
+            )
+            ElevatedFilterChip(
+                selected = (daemonState == "SLEEP"),
+                onClick = { viewModel.updateDaemonState("SLEEP") },
+                label = { Text("SLEEP") },
+                modifier = Modifier.weight(1fr)
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -71,15 +81,27 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
                 onDismissRequest = { expandedInterval = false },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                listOf("Every 5 min", "Every 15 min", "Hourly").forEach { interval ->
-                    DropdownMenuItem(
-                        text = { Text(interval) },
-                        onClick = {
-                            viewModel.updateCronInterval(interval)
-                            expandedInterval = false
-                        }
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text("Every 5 min") },
+                    onClick = {
+                        viewModel.updateCronInterval("Every 5 min")
+                        expandedInterval = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Every 15 min") },
+                    onClick = {
+                        viewModel.updateCronInterval("Every 15 min")
+                        expandedInterval = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Hourly") },
+                    onClick = {
+                        viewModel.updateCronInterval("Hourly")
+                        expandedInterval = false
+                    }
+                )
             }
         }
 
