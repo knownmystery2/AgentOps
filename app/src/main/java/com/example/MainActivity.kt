@@ -35,8 +35,10 @@ class MainActivity : ComponentActivity() {
 
         val db = AppDatabase.getInstance(applicationContext, lifecycleScope)
         val viewModel = MainViewModel(db)
-            override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+               // Corrected name to match your exact file name in the repository
+        val agent = com.opensource.autonomous.agent.worker.AgentOrchestrationWorker(applicationContext)
+        agent.startAgent()
+     
         enableEdgeToEdge()
 
         val db = AppDatabase.getInstance(applicationContext, lifecycleScope)
