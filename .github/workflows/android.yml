@@ -26,10 +26,9 @@ jobs:
       run: gradle wrapper
 
     - name: Build Unsigned APK
-      run: ./gradlew assembleDebug -Pandroid.injected.signing.store.file="" -Pandroid.injected.signing.store.password="" -Pandroid.injected.signing.key.alias="" -Pandroid.injected.signing.key.password=""
-    - name: Build Unsigned APK
       run: ./gradlew assembleDebug -x validateSigningDebug -x validateSigningRelease
 
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: my-app-debug-apk
