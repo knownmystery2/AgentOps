@@ -1,7 +1,6 @@
 package com.example
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -18,7 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.lifecycle.lifecycleScope
 import com.example.ui.theme.MyApplicationTheme
 import com.example.agentops.ui.MainViewModel
 import com.opensource.autonomous.agent.ui.screens.*
@@ -29,7 +27,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize the MainViewModel using the application context cleanly
+        // Clean architecture view model context binding
         val viewModel = MainViewModel(application)
 
         setContent {
