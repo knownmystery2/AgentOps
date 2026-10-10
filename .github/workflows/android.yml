@@ -27,8 +27,7 @@ jobs:
 
     - name: Create Fake Keystore Placeholder
       run: |
-        mkdir -p AgentOps/AgentOps
-        touch AgentOps/AgentOps/debug.keystore
+        touch debug.keystore
 
     - name: Build Unsigned APK
       run: ./gradlew assembleDebug -x validateSigningDebug
