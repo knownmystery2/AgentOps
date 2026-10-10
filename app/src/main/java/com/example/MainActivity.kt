@@ -18,7 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.example.ui.theme.MyApplicationTheme
-import com.opensource.autonomous.agent.ui.MainViewModel
+import com.example.agentops.ui.MainViewModel
 import com.opensource.autonomous.agent.ui.screens.*
 
 class MainActivity : ComponentActivity() {
