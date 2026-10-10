@@ -99,14 +99,46 @@ data class StandbyProviderEntity(
     val endpointUrl: String
 )
 
-// User Written Design Specs & Autonomous Settings
+// User Written Design Specs & Dual-Layer Autonomous Settings
 @Entity(tableName = "business_settings")
 data class SettingsEntity(
     @PrimaryKey val id: Int = 1,
+    // General Settings Layer
+    val globalAutomationActive: Boolean = true,
+    val notificationLevel: String = "All Alerts", // All Alerts, Approvals Only, Silent
+    val productFrequency: String = "Daily", // Every 12h, Daily, Weekly
+    val riskLevel: String = "Balanced", // Conservative, Balanced, Aggressive
+    
+    // Core Specifications
     val allowedStyles: String = "Minimalist line art, Vintage botanical, Retro typographic 70s, Cyber-grid geometric, Cottagecore watercolor",
     val forbiddenItems: String = "Trademarked logos, Disney/Marvel characters, celebrity names, copyrighted song lyrics, brand slogans",
     val preferredPalettes: String = "Earthy terracotta, Charcoal slate, Pastel sage, Amber gold, Monochrome ink",
+    val minMarginPercent: Int = 35,
+
+    // Advanced Developer Settings Layer - Endpoints
+    val backendServerEndpoint: String = "http://10.0.2.2:8080",
     val ollamaEndpoint: String = "http://10.0.2.2:11434",
     val ollamaModel: String = "llama3",
-    val minMarginPercent: Int = 35
+
+    // Advanced Developer Settings Layer - Per-Agent Model Customization
+    val modelCeo: String = "llama3",
+    val modelResearch: String = "llama3",
+    val modelProduct: String = "llama3",
+    val modelMarketing: String = "llama3",
+    val modelContent: String = "llama3",
+    val modelSupport: String = "llama3",
+    val modelFinance: String = "llama3",
+
+    // Advanced Developer Settings Layer - Raw API Key Storage (Masked)
+    val keyGithub: String = "",
+    val keyStripe: String = "",
+    val keyGroq: String = "",
+    val keyHuggingFace: String = "",
+    val keyOpenRouter: String = "",
+    val keyGemini: String = "",
+
+    // Advanced Developer Settings Layer - Bypass System Flags
+    val bypassApprovals: Boolean = false,
+    val bypassRateLimits: Boolean = false,
+    val offlineSimulationMode: Boolean = false
 )

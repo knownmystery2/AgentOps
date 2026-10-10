@@ -24,7 +24,7 @@ import java.util.UUID
         SettingsEntity::class,
         KnowledgeEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -162,7 +162,7 @@ abstract class AppDatabase : RoomDatabase() {
             // 4. Seed Initial Immutable Double-Entry Ledger (In Whole Cents)
             val ledger = listOf(
                 LedgerEntity(
-                    timestamp = now - 86400000L * 2,
+                    timestamp = now,
                     code = "TXN-1001",
                     store = "Solaris Minimal POD",
                     platform = "Etsy",
@@ -174,7 +174,7 @@ abstract class AppDatabase : RoomDatabase() {
                     category = "SALE"
                 ),
                 LedgerEntity(
-                    timestamp = now - 86400000L * 2,
+                    timestamp = now,
                     code = "TXN-1002",
                     store = "Solaris Minimal POD",
                     platform = "Printify Direct",
@@ -186,7 +186,7 @@ abstract class AppDatabase : RoomDatabase() {
                     category = "COGS"
                 ),
                 LedgerEntity(
-                    timestamp = now - 86400000L * 2,
+                    timestamp = now,
                     code = "TXN-1003",
                     store = "Solaris Minimal POD",
                     platform = "Etsy",
@@ -198,7 +198,7 @@ abstract class AppDatabase : RoomDatabase() {
                     category = "FEE"
                 ),
                 LedgerEntity(
-                    timestamp = now - 3600000L * 6,
+                    timestamp = now,
                     code = "TXN-1004",
                     store = "ZenDesk Studio",
                     platform = "Shopify Free Tier",
@@ -210,7 +210,7 @@ abstract class AppDatabase : RoomDatabase() {
                     category = "SALE"
                 ),
                 LedgerEntity(
-                    timestamp = now - 3600000L * 6,
+                    timestamp = now,
                     code = "TXN-1005",
                     store = "ZenDesk Studio",
                     platform = "AliExpress Direct Supplier",
@@ -222,7 +222,7 @@ abstract class AppDatabase : RoomDatabase() {
                     category = "COGS"
                 ),
                 LedgerEntity(
-                    timestamp = now - 3600000L * 6,
+                    timestamp = now,
                     code = "TXN-1006",
                     store = "ZenDesk Studio",
                     platform = "Payment Gateway",
