@@ -25,7 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
+import com.opensource.autonomous.agent.data.AgentStatus
+import com.opensource.autonomous.agent.data.AutonomousAgent
 import com.opensource.autonomous.agent.data.SettingsEntity
+import com.opensource.autonomous.agent.ui.AutonomousAgentInspectorDialog
 import com.opensource.autonomous.agent.ui.MainViewModel
 
 enum class SettingsCategory(val label: String, val icon: ImageVector) {
@@ -54,6 +57,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var selectedCategory by remember { mutableStateOf(SettingsCategory.ALL) }
     var showResetDialog by remember { mutableStateOf(false) }
     var saveFeedbackMessage by remember { mutableStateOf<String?>(null) }
+    val autonomousAgents by viewModel.autonomousAgents.collectAsState()
+    var inspectingAgentInSettings by remember { mutableStateOf<AutonomousAgent?>(null) }
 
     // 1. Account & Profile State
     var businessName by remember(currentSettings) { mutableStateOf(currentSettings?.businessName ?: "Autonomous Studio") }
@@ -713,6 +718,121 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
                     HorizontalDivider()
 
+                    HorizontalDivider()
+
+                    // Operational Roles & Status Management Section
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Autonomous Fleet Operational Status", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                                Text("Set individual agents to Active or Standby reserve mode", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { viewModel.setAllAgentsStatus(AgentStatus.ACTIVE) },
+                                modifier = Modifier.weight(1f).testTag("settings_activate_all_agents")
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp), tint = ProfitGreen)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Activate All", fontSize = 11.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.setAllAgentsStatus(AgentStatus.STANDBY) },
+                                modifier = Modifier.weight(1f).testTag("settings_standby_all_agents")
+                            ) {
+                                Icon(Icons.Default.Pause, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFF59E0B))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Standby All", fontSize = 11.sp)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        autonomousAgents.forEach { agent ->
+                            val isAgentActive = agent.isActive
+                            val statusColor = if (isAgentActive) ProfitGreen else Color(0xFFF59E0B)
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = agent.name,
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = statusColor.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = if (isAgentActive) "ACTIVE" else "STANDBY",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = statusColor,
+                                                    fontSize = 9.sp,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "${agent.role.title} • ${agent.department.departmentName}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (agent.requiresHumanApproval) {
+                                            Text(
+                                                text = "🔒 Human Verification Gate: Required",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = { inspectingAgentInSettings = agent },
+                                            modifier = Modifier.size(32.dp).testTag("inspect_settings_agent_${agent.id}")
+                                        ) {
+                                            Icon(Icons.Default.Info, contentDescription = "Inspect Role", modifier = Modifier.size(18.dp))
+                                        }
+
+                                        Switch(
+                                            checked = isAgentActive,
+                                            onCheckedChange = { checked ->
+                                                viewModel.setAgentStatus(agent.id, if (checked) AgentStatus.ACTIVE else AgentStatus.STANDBY)
+                                            },
+                                            modifier = Modifier.testTag("settings_agent_switch_${agent.id}")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider()
+
                     // Per-Agent Model Matrix Sub-section
                     Text("Per-Agent Free-Tier AI Model Matrix", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                     Text("Assign specific open-source or free-tier models to each specialized agent role.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1234,6 +1354,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Button(onClick = { viewModel.dismissJsonSchemaDialog() }) {
                     Text("Done")
                 }
+            }
+        )
+    }
+
+    inspectingAgentInSettings?.let { agent ->
+        AutonomousAgentInspectorDialog(
+            agent = agent,
+            onDismiss = { inspectingAgentInSettings = null },
+            onToggleStatus = { nextStatus ->
+                viewModel.setAgentStatus(agent.id, nextStatus)
+                inspectingAgentInSettings = agent.copy(status = nextStatus)
+            },
+            onDispatchDirective = { directive ->
+                viewModel.dispatchAdHocTask(agent.id, "Settings Directive", directive)
             }
         )
     }

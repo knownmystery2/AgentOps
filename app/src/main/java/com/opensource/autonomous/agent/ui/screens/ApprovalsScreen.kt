@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
 import com.opensource.autonomous.agent.data.DecisionEntity
+import com.opensource.autonomous.agent.data.OperationalRole
 import com.opensource.autonomous.agent.ui.MainViewModel
 
 @Composable
@@ -246,6 +247,7 @@ fun DecisionApprovalCard(
     val formattedTime = viewModel.formatLiveTimestamp(decision.timestamp)
     val relativeTime = viewModel.formatRelativeTime(decision.timestamp)
     val hmacSignature = viewModel.computeDecisionHmac(decision)
+    val operationalRole = remember(decision.agentSource) { OperationalRole.fromRoleString(decision.agentSource) }
 
     Card(
         modifier = Modifier
@@ -265,7 +267,7 @@ fun DecisionApprovalCard(
                     color = BrandEmerald.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = decision.agentSource.uppercase(),
+                        text = "${operationalRole.department.code} • ${decision.agentSource.uppercase()}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = BrandEmerald,

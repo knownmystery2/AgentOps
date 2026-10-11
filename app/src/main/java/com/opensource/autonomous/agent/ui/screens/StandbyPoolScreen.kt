@@ -1,8 +1,10 @@
 package com.opensource.autonomous.agent.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,7 +20,10 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
 import com.opensource.autonomous.agent.data.AccountTaskEntity
+import com.opensource.autonomous.agent.data.AgentStatus
+import com.opensource.autonomous.agent.data.AutonomousAgent
 import com.opensource.autonomous.agent.data.StandbyProviderEntity
+import com.opensource.autonomous.agent.ui.AutonomousAgentInspectorDialog
 import com.opensource.autonomous.agent.ui.MainViewModel
 
 @Composable
@@ -29,6 +34,9 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
     val cronSchedule by viewModel.cronSchedule.collectAsState()
     val workerConcurrency by viewModel.workerConcurrency.collectAsState()
     val memoryThrottleMb by viewModel.memoryThrottleMb.collectAsState()
+    val autonomousAgents by viewModel.autonomousAgents.collectAsState()
+    val standbyAgents = autonomousAgents.filter { it.isStandby }
+    var inspectingStandbyAgent by remember { mutableStateOf<AutonomousAgent?>(null) }
 
     val pendingTasks = tasks.filter { !it.isCompleted }
     val healthyProviders = providers.count { it.status == "ACTIVE" || it.status == "STANDBY" }
@@ -285,6 +293,159 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
         items(providers) { provider ->
             ProviderRegistryCard(provider)
         }
+
+        // 6. Autonomous Agent Standby Reserve Section
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().testTag("standby_agents_header_card")
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0xFFF59E0B).copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.HourglassTop, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Autonomous Agent Standby Reserve",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Ready-reserve agents listening for webhook events and failover triggers",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFF59E0B).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "${standbyAgents.size} In Reserve",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFF59E0B),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (standbyAgents.isEmpty()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "All 11 autonomous agents are currently Active in the live swarm. None are in standby reserve.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ProfitGreen
+                        )
+                    }
+                }
+            }
+        } else {
+            items(standbyAgents, key = { it.id }) { agent ->
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth().testTag("standby_agent_${agent.id}")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = agent.name,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = BrandEmerald.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = agent.department.code,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BrandEmerald,
+                                        fontSize = 9.sp,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = agent.role.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = agent.currentTask ?: "Standby reserve: listening for triggers",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                onClick = { inspectingStandbyAgent = agent },
+                                modifier = Modifier.testTag("inspect_standby_${agent.id}")
+                            ) {
+                                Text("Inspect", fontSize = 11.sp)
+                            }
+                            Button(
+                                onClick = { viewModel.setAgentStatus(agent.id, AgentStatus.ACTIVE) },
+                                modifier = Modifier.testTag("promote_agent_${agent.id}")
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Activate", fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    inspectingStandbyAgent?.let { agent ->
+        AutonomousAgentInspectorDialog(
+            agent = agent,
+            onDismiss = { inspectingStandbyAgent = null },
+            onToggleStatus = { nextStatus ->
+                viewModel.setAgentStatus(agent.id, nextStatus)
+                inspectingStandbyAgent = agent.copy(status = nextStatus)
+            },
+            onDispatchDirective = { directive ->
+                viewModel.dispatchAdHocTask(agent.id, "Standby Pool Directive", directive)
+            }
+        )
     }
 }
 

@@ -92,12 +92,19 @@ fun LedgerScreen(viewModel: MainViewModel) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isBalanced) "Ledger Balanced: Debits == Credits" else "Ledger Initializing",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = ProfitGreen
-                            )
+                            Column {
+                                Text(
+                                    text = if (isBalanced) "Ledger Balanced: Debits == Credits" else "Ledger Initializing",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ProfitGreen
+                                )
+                                Text(
+                                    text = "Audited by: Finance Agent (FIN) • Unit Economics",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                         FilledTonalButton(
                             onClick = { viewModel.syncLiveTransactions() },

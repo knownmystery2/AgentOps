@@ -17,9 +17,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
+import com.opensource.autonomous.agent.data.AgentStatus
+import com.opensource.autonomous.agent.data.AutonomousAgent
+import com.opensource.autonomous.agent.ui.AdvancedWorkspaceDashboard
+import com.opensource.autonomous.agent.ui.AutonomousAgentInspectorDialog
 import com.opensource.autonomous.agent.ui.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -42,6 +48,10 @@ fun DashboardScreen(
     val isLiveConnected by viewModel.isLiveConnected.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val selectedFilter by viewModel.selectedLogFilter.collectAsState()
+    val autonomousAgents by viewModel.autonomousAgents.collectAsState()
+    var inspectingAgent by remember { mutableStateOf<AutonomousAgent?>(null) }
+    var selectedDepartmentFilter by remember { mutableStateOf("ALL") }
+    var showAdvancedSwarmHub by remember { mutableStateOf(false) }
 
     val salesList = ledger.filter { it.category == "SALE" }
     val grossCents = salesList.sumOf { it.amountCents }
@@ -208,6 +218,225 @@ fun DashboardScreen(
                         QueuePill(label = "Running", count = runningWorkerTasks, color = BrandEmerald, modifier = Modifier.weight(1f))
                         QueuePill(label = "Completed", count = completedWorkerTasks, color = ProfitGreen, modifier = Modifier.weight(1f))
                         QueuePill(label = "Failed", count = failedWorkerTasks, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        // Autonomous Swarm Operations Fleet Card
+        item {
+            val activeAgentsCount = autonomousAgents.count { it.isActive }
+            val standbyAgentsCount = autonomousAgents.count { it.isStandby }
+            val filteredSwarm = remember(autonomousAgents, selectedDepartmentFilter) {
+                if (selectedDepartmentFilter == "ALL") {
+                    autonomousAgents
+                } else {
+                    autonomousAgents.filter { it.department.code == selectedDepartmentFilter }
+                }
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("autonomous_swarm_fleet_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(BrandEmerald.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.SmartToy, contentDescription = null, tint = BrandEmerald)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Autonomous Swarm Operations Fleet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "11 Business Roles • Active / Standby State Matrix",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = ProfitGreen.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "$activeAgentsCount Active • $standbyAgentsCount Standby",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ProfitGreen,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { showAdvancedSwarmHub = true },
+                                modifier = Modifier.size(32.dp).testTag("open_advanced_swarm_hub_btn")
+                            ) {
+                                Icon(
+                                    Icons.Default.OpenInNew,
+                                    contentDescription = "Open Full Swarm Hub",
+                                    tint = BrandEmerald,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Bulk Swarm Controls
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.setAllAgentsStatus(AgentStatus.ACTIVE) },
+                            modifier = Modifier.weight(1f).testTag("bulk_activate_swarm_btn")
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp), tint = ProfitGreen)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Activate All", fontSize = 12.sp)
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.setAllAgentsStatus(AgentStatus.STANDBY) },
+                            modifier = Modifier.weight(1f).testTag("bulk_standby_swarm_btn")
+                        ) {
+                            Icon(Icons.Default.Pause, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFF59E0B))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Standby All", fontSize = 12.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Department Filter Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("ALL", "EXEC", "INTEL", "BRAND", "PROD", "SALES", "SUPPLY", "GROWTH", "CRM", "FIN", "LEGAL", "DEVOPS").forEach { deptCode ->
+                            FilterChip(
+                                selected = selectedDepartmentFilter == deptCode,
+                                onClick = { selectedDepartmentFilter = deptCode },
+                                label = { Text(deptCode, fontSize = 10.sp, fontWeight = FontWeight.SemiBold) },
+                                modifier = Modifier.testTag("swarm_dept_filter_$deptCode")
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Horizontal Scrolling Agent Cards
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        filteredSwarm.forEach { agent ->
+                            val isAgentActive = agent.isActive
+                            val statusColor = if (isAgentActive) ProfitGreen else Color(0xFFF59E0B)
+
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .width(260.dp)
+                                    .testTag("dashboard_agent_card_${agent.id}")
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = agent.department.code,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = BrandEmerald
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = statusColor.copy(alpha = 0.2f)
+                                        ) {
+                                            Text(
+                                                text = if (isAgentActive) "ACTIVE" else "STANDBY",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = statusColor,
+                                                fontSize = 9.sp,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = agent.name,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = agent.role.title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = agent.role.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp,
+                                        maxLines = 2
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        TextButton(
+                                            onClick = { inspectingAgent = agent },
+                                            modifier = Modifier.testTag("inspect_agent_${agent.id}")
+                                        ) {
+                                            Text("Inspect Role", fontSize = 11.sp)
+                                        }
+
+                                        Switch(
+                                            checked = isAgentActive,
+                                            onCheckedChange = { checked ->
+                                                viewModel.setAgentStatus(agent.id, if (checked) AgentStatus.ACTIVE else AgentStatus.STANDBY)
+                                            },
+                                            modifier = Modifier.testTag("toggle_agent_switch_${agent.id}")
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -983,6 +1212,34 @@ fun DashboardScreen(
                         fontSize = 12.sp
                     )
                 }
+            }
+        }
+    }
+
+    inspectingAgent?.let { agent ->
+        AutonomousAgentInspectorDialog(
+            agent = agent,
+            onDismiss = { inspectingAgent = null },
+            onToggleStatus = { nextStatus ->
+                viewModel.setAgentStatus(agent.id, nextStatus)
+                inspectingAgent = agent.copy(status = nextStatus)
+            },
+            onDispatchDirective = { directive ->
+                viewModel.dispatchAdHocTask(agent.id, "Direct Console Dispatch", directive)
+            }
+        )
+    }
+
+    if (showAdvancedSwarmHub) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showAdvancedSwarmHub = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AdvancedWorkspaceDashboard(
+                    viewModel = viewModel,
+                    onClose = { showAdvancedSwarmHub = false }
+                )
             }
         }
     }

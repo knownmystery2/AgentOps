@@ -25,7 +25,10 @@ import com.opensource.autonomous.agent.network.SwarmAgentStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdvancedWorkspaceDashboard(viewModel: MainViewModel) {
+fun AdvancedWorkspaceDashboard(
+    viewModel: MainViewModel,
+    onClose: (() -> Unit)? = null
+) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabTitles = listOf("Live Swarm Hub", "Decision Engine", "Centralized Logs")
 
@@ -38,6 +41,13 @@ fun AdvancedWorkspaceDashboard(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (onClose != null) {
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Close Hub")
+                        }
+                    }
+                },
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(

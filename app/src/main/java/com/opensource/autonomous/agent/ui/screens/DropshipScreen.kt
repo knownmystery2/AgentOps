@@ -40,11 +40,34 @@ fun DropshipScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Dropshipping Sourcing Pipeline",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = "Dropshipping Sourcing Pipeline",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = BrandEmerald.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "SUPPLY • Agent #6 (Procurement)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandEmerald,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Zero Upfront Capital Guaranteed",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ProfitGreen,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                     FilledTonalButton(
                         onClick = { viewModel.syncSupplierFeeds() },
                         enabled = !isSyncingSuppliers,
@@ -67,14 +90,21 @@ fun DropshipScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     FilterChip(
                         selected = zeroCostFilterActive,
                         onClick = { zeroCostFilterActive = !zeroCostFilterActive },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                        label = { Text("Zero Upfront Cost Filter (Enforced)") },
+                        label = { Text("Zero Upfront Cost Filter") },
                         modifier = Modifier.testTag("zero_cost_filter_chip")
+                    )
+
+                    Text(
+                        text = "${displayItems.size} suppliers active",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

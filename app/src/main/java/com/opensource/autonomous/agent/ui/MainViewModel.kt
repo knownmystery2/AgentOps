@@ -239,6 +239,16 @@ open class MainViewModel(
         }
     }
 
+    fun setAllAgentsStatus(status: AgentStatus) {
+        viewModelScope.launch {
+            val list = agents.value
+            for (agent in list) {
+                repository.updateAgentStatus(agent.id, status)
+            }
+            deriveLocalSwarmState()
+        }
+    }
+
     // =========================================================================
     // 1. CONSOLE MODULE: Live Logging, Uptime & Queue Counters
     // =========================================================================

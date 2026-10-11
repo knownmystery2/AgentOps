@@ -41,6 +41,7 @@ fun PodMockupScreen(
     val selectedPlacement by viewModel.selectedMockupPlacement.collectAsState()
     val podQueue by viewModel.podQueue.collectAsState()
     val isGeneratingPod by viewModel.isGeneratingPod.collectAsState()
+    val isPitchingIdeas by viewModel.isPitchingIdeas.collectAsState()
 
     val products = listOf("Heavyweight T-Shirt", "Vintage Hoodie", "Ceramic Mug", "Canvas Tote Bag", "Wall Art Poster")
     val colors = listOf(
@@ -63,15 +64,33 @@ fun PodMockupScreen(
     Scaffold(
         topBar = {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                        Text(
+                            text = "POD Studio & Vector Pipeline",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    Text(
-                        text = "POD Studio & Vector Pipeline",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = BrandEmerald.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "PROD • Agent #4",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandEmerald,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
                 Text(
                     text = "High-precision 300 DPI vector placement engine & live SKU creation pipeline.",
@@ -255,25 +274,48 @@ fun PodMockupScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Button(
-                        onClick = {
-                            viewModel.dispatchSkuToProductionQueue(
-                                product = selectedProduct,
-                                color = selectedColor,
-                                placement = selectedPlacement
-                            )
-                        },
-                        enabled = !isGeneratingPod,
-                        modifier = Modifier.fillMaxWidth().testTag("dispatch_sku_button")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (isGeneratingPod) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Compiling 300 DPI Vector Artwork...")
-                        } else {
-                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Dispatch SKU to Production Queue")
+                        Button(
+                            onClick = {
+                                viewModel.dispatchSkuToProductionQueue(
+                                    product = selectedProduct,
+                                    color = selectedColor,
+                                    placement = selectedPlacement
+                                )
+                            },
+                            enabled = !isGeneratingPod,
+                            modifier = Modifier.weight(1f).testTag("dispatch_sku_button")
+                        ) {
+                            if (isGeneratingPod) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Compiling...", fontSize = 12.sp)
+                            } else {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Queue SKU", fontSize = 12.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.pitchNewProductIdeas("$selectedProduct in $selectedColor Line Art")
+                            },
+                            enabled = !isPitchingIdeas,
+                            modifier = Modifier.weight(1f).testTag("pod_agent_pitch_btn")
+                        ) {
+                            if (isPitchingIdeas) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pitching...", fontSize = 12.sp)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = BrandEmerald)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("AI POD Pitch", fontSize = 12.sp)
+                            }
                         }
                     }
                 }
