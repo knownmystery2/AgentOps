@@ -22,9 +22,13 @@ import java.util.UUID
         AccountTaskEntity::class,
         StandbyProviderEntity::class,
         SettingsEntity::class,
-        KnowledgeEntity::class
+        KnowledgeEntity::class,
+        StorefrontEntity::class,
+        TrademarkCheckEntity::class,
+        AgentMessageEntity::class,
+        DigitalProductEntity::class
     ],
-    version = 3,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,12 +42,16 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun providerDao(): ProviderDao
     abstract fun settingsDao(): SettingsDao
     abstract fun knowledgeDao(): KnowledgeDao
+    abstract fun storefrontDao(): StorefrontDao
+    abstract fun trademarkDao(): TrademarkDao
+    abstract fun agentMessageDao(): AgentMessageDao
+    abstract fun digitalProductDao(): DigitalProductDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        fun getInstance(context: Context, scope: CoroutineScope): AppDatabase {
+        fun getInstance(context: Context, scope: CoroutineScope = CoroutineScope(Dispatchers.IO)): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
@@ -380,6 +388,150 @@ abstract class AppDatabase : RoomDatabase() {
 
             // 9. Seed Settings
             db.settingsDao().saveSettings(SettingsEntity())
+
+            // 10. Seed Initial Zero-Cost Storefront
+            val storefronts = listOf(
+                StorefrontEntity(
+                    id = "store-01",
+                    companyName = "Apex Minimal Studio",
+                    businessNiche = "Print-on-Demand & Digital Assets",
+                    platformType = "GitHub Pages + Stripe",
+                    status = "ACTIVE",
+                    repoName = "apex-minimal-store",
+                    repoUrl = "https://github.com/autonomous-ops/apex-minimal-store",
+                    stripePaymentLink = "https://buy.stripe.com/test_zero_cost_apex",
+                    monthlyRevenueCents = 8450L, // $84.50
+                    monthlyCostCents = 0L, // $0.00
+                    productsCount = 6,
+                    complianceStatus = "VERIFIED_100_CLEAN",
+                    setupLog = "Automated repo creation, static Jamstack template committed, Stripe live checkout webhooks linked, zero hosting fees."
+                )
+            )
+            db.storefrontDao().insertStorefronts(storefronts)
+
+            // 11. Seed Initial Trademark Clearance Checks
+            val initialChecks = listOf(
+                TrademarkCheckEntity(
+                    id = "tm-01",
+                    assetTitle = "Apex Minimal Geometric Wave Tee",
+                    assetCategory = "POD_DESIGN",
+                    similarityScore = 0.02f,
+                    usptoDbChecked = true,
+                    copyrightDbChecked = true,
+                    trademarkCollisions = "0 collisions detected across USPTO Class 025 (Clothing). Original geometry.",
+                    verificationStatus = "CLEARED_SAFE",
+                    clearanceHash = hashToken("CLEARED-APEX-GEOMETRIC-WAVE")
+                ),
+                TrademarkCheckEntity(
+                    id = "tm-02",
+                    assetTitle = "Nordic Wave Ceramic Incense & Candle Tray",
+                    assetCategory = "PRODUCT_TITLE",
+                    similarityScore = 0.04f,
+                    usptoDbChecked = true,
+                    copyrightDbChecked = true,
+                    trademarkCollisions = "0 collisions detected across USPTO Class 021 (Household goods). Clean generic terms.",
+                    verificationStatus = "CLEARED_SAFE",
+                    clearanceHash = hashToken("CLEARED-NORDIC-WAVE-TRAY")
+                )
+            )
+            db.trademarkDao().insertChecks(initialChecks)
+
+            // 12. Seed Multi-Agent Pitch & Inter-Agent Messages
+            val initialMessages = listOf(
+                AgentMessageEntity(
+                    senderAgentId = "2",
+                    senderAgentName = "Trend & Niche Scout",
+                    recipientAgentId = "4",
+                    messageType = "PITCH",
+                    subject = "New Product Pitch: Vintage Botanical Heavyweight Hoodies",
+                    body = "Scanned organic demand metrics: +34% search surge for cottagecore botanical flora. Pitching POD Design Agent to formulate 300 DPI vector artwork.",
+                    payloadJson = """{"niche":"Vintage Botanical","targetMargin":48,"suggestedRetail":3800}"""
+                ),
+                AgentMessageEntity(
+                    senderAgentId = "4",
+                    senderAgentName = "POD Design Agent",
+                    recipientAgentId = "10",
+                    messageType = "CLEARANCE_REQUEST",
+                    subject = "Trademark Pre-Screen Request: 'Fern & Lichen Arboretum'",
+                    body = "Design generated with open-source ink vector engine. Requesting Compliance Agent to verify against USPTO classes 025 and 016 prior to human sign-off request.",
+                    payloadJson = """{"title":"Fern & Lichen Arboretum","class":"025"}"""
+                ),
+                AgentMessageEntity(
+                    senderAgentId = "10",
+                    senderAgentName = "Compliance Agent",
+                    recipientAgentId = "1",
+                    messageType = "AUDIT_RESPONSE",
+                    subject = "Trademark Audit Result: VERIFIED 100% CLEAN",
+                    body = "USPTO and WIPO search complete. 0 conflicts found. Certificate SHA-256 generated. Escalating to Human Approvals Queue for final executive sign-off.",
+                    payloadJson = """{"status":"CLEARED_SAFE","hash":"c7f901a8b2"}"""
+                )
+            )
+            db.agentMessageDao().insertMessages(initialMessages)
+
+            // 13. Seed Initial Autonomous Zero-Cost Digital Products ($0 COGS - 100% Profit)
+            val initialDigitalProducts = listOf(
+                DigitalProductEntity(
+                    id = "digi-prod-001",
+                    title = "AI Prompt Engineering Blueprint 2026",
+                    niche = "AI & Developer Tooling",
+                    category = "PROMPT_GUIDE",
+                    description = "500+ battle-tested system prompts for Claude 3.5, Llama 3, and DeepSeek. Includes structured JSON schema generators and multi-agent workflow templates.",
+                    priceCents = 2900L, // $29.00
+                    costCents = 0L,
+                    profitMarginPercent = 100,
+                    contentPayload = "# AI Prompt Engineering Master Blueprint 2026\n\n## Module 1: Zero-Shot to Multi-Agent Reasoning\n- Chain-of-Thought elicitation frameworks\n- Role-conditioned behavioral boundaries\n- JSON extraction without hallucination\n\n## Module 2: System Directives\nStrict guidelines for deterministic LLM tool calling in production pipelines.",
+                    fileFormat = "Markdown (.md) + JSON Bundle",
+                    downloadUrl = "https://raw.githubusercontent.com/autonomous-ops/ai-prompts/main/blueprint.md",
+                    stripePaymentLink = "https://buy.stripe.com/test_ai_prompt_blueprint_29",
+                    githubRepo = "https://github.com/autonomous-ops/ai-prompt-blueprint",
+                    status = "PUBLISHED_LIVE",
+                    clearanceCertificate = "CERT-USPTO-AI-PROMPT-CLEARED-01",
+                    salesCount = 14,
+                    totalRevenueCents = 40600L, // $406.00 earned
+                    createdAt = System.currentTimeMillis() - 86400000L * 4
+                ),
+                DigitalProductEntity(
+                    id = "digi-prod-002",
+                    title = "Solopreneur Notion OS & Ledger Template",
+                    niche = "Productivity & Small Business",
+                    category = "NOTION_SYSTEM",
+                    description = "Comprehensive Notion workspace for automated business tracking, invoice generation, customer CRM, and automated balance sheet logging.",
+                    priceCents = 1900L, // $19.00
+                    costCents = 0L,
+                    profitMarginPercent = 100,
+                    contentPayload = "{\n  \"template\": \"Solopreneur Notion OS\",\n  \"databases\": [\"Income & Expenses\", \"Project Kanban\", \"Client Directory\", \"Inventory Tracker\"],\n  \"shareUrl\": \"https://notion.site/template/solopreneur-os-2026\"\n}",
+                    fileFormat = "Notion Duplicate Link + JSON Template",
+                    downloadUrl = "https://notion.site/solopreneur-os-duplicate",
+                    stripePaymentLink = "https://buy.stripe.com/test_notion_solopreneur_19",
+                    githubRepo = "https://github.com/autonomous-ops/notion-solopreneur-os",
+                    status = "PUBLISHED_LIVE",
+                    clearanceCertificate = "CERT-USPTO-NOTION-OS-CLEARED-02",
+                    salesCount = 28,
+                    totalRevenueCents = 53200L, // $532.00 earned
+                    createdAt = System.currentTimeMillis() - 86400000L * 2
+                ),
+                DigitalProductEntity(
+                    id = "digi-prod-003",
+                    title = "Minimalist Cyberpunk Vector Asset Pack",
+                    niche = "Graphic Design & Digital Art",
+                    category = "GRAPHIC_PACK",
+                    description = "120 royalty-free, precision geometric SVG line art vectors. Scalable to any print or web resolution with zero pixelation.",
+                    priceCents = 1500L, // $15.00
+                    costCents = 0L,
+                    profitMarginPercent = 100,
+                    contentPayload = "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='40' stroke='#10b981' stroke-width='2' fill='none'/><polygon points='50,20 80,75 20,75' stroke='#38bdf8' stroke-width='1.5' fill='none'/></svg>",
+                    fileFormat = "Vector SVG + AI + Figma Bundle",
+                    downloadUrl = "https://raw.githubusercontent.com/autonomous-ops/vector-pack/main/cyber-minimal.zip",
+                    stripePaymentLink = "https://buy.stripe.com/test_vector_asset_pack_15",
+                    githubRepo = "https://github.com/autonomous-ops/cyber-vector-assets",
+                    status = "PENDING_APPROVAL",
+                    clearanceCertificate = "CERT-USPTO-CYBER-VECTOR-CLEARED-03",
+                    salesCount = 0,
+                    totalRevenueCents = 0L,
+                    createdAt = System.currentTimeMillis() - 3600000L
+                )
+            )
+            db.digitalProductDao().insertProducts(initialDigitalProducts)
         }
     }
 }

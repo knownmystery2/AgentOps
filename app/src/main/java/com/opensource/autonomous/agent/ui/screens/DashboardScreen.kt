@@ -256,6 +256,507 @@ fun DashboardScreen(
             }
         }
 
+        // Autonomous Zero-Cost Storefront Deployment Card
+        item {
+            var targetCompanyName by remember { mutableStateOf("") }
+            var targetBusinessNiche by remember { mutableStateOf("") }
+            val isDeployingStorefront by viewModel.isDeployingStorefront.collectAsState()
+            val storefrontDeploymentStatus by viewModel.storefrontDeploymentStatus.collectAsState()
+            val storefronts by viewModel.storefronts.collectAsState()
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("zero_cost_storefront_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(ProfitGreen.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Storefront, contentDescription = null, tint = ProfitGreen)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Autonomous Storefront Creator",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Zero Cost Deployment • Multi-Agent Automation",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ProfitGreen
+                                )
+                            }
+                        }
+                        AssistChip(
+                            onClick = { },
+                            label = { Text("${storefronts.size} Live Stores") },
+                            leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(14.dp)) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Instruct the AI swarm to launch a turn-key storefront for any company or business. The agents code the repo on GitHub, link Stripe checkouts, generate zero-cost POD items, and pre-verify trademarks before your final approval.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = targetCompanyName,
+                        onValueChange = { targetCompanyName = it },
+                        label = { Text("Company or Business Name") },
+                        placeholder = { Text("e.g. Solaris Living Studio") },
+                        modifier = Modifier.fillMaxWidth().testTag("storefront_company_input"),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = targetBusinessNiche,
+                        onValueChange = { targetBusinessNiche = it },
+                        label = { Text("Business Niche & Products") },
+                        placeholder = { Text("e.g. Eco-Minimalist Ceramic Decor & Cotton Apparel") },
+                        modifier = Modifier.fillMaxWidth().testTag("storefront_niche_input"),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (storefrontDeploymentStatus != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = storefrontDeploymentStatus ?: "",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            if (targetCompanyName.isNotBlank()) {
+                                viewModel.requestZeroCostStorefront(targetCompanyName, targetBusinessNiche)
+                                targetCompanyName = ""
+                                targetBusinessNiche = ""
+                            }
+                        },
+                        enabled = !isDeployingStorefront && targetCompanyName.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth().testTag("deploy_storefront_button")
+                    ) {
+                        if (isDeployingStorefront) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Assembling Swarm & Verifying Trademarks...")
+                        } else {
+                            Icon(Icons.Default.RocketLaunch, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Create Zero-Cost Storefront For Me")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Multi-Agent Pitch & Trademark Protection Studio Card
+        item {
+            val isPitchingIdeas by viewModel.isPitchingIdeas.collectAsState()
+            val trademarkChecks by viewModel.trademarkChecks.collectAsState()
+            val agentMessages by viewModel.agentMessages.collectAsState()
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("multi_agent_pitch_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Hub, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Multi-Agent Idea Pitches & TM Shield",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "100% Non-Infringing • Pre-Screened Approval",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        AssistChip(
+                            onClick = { },
+                            label = { Text("Zero Risk") },
+                            leadingIcon = { Icon(Icons.Default.Shield, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(14.dp)) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Autonomous agents (Trend Scout, POD Designer, and Compliance) collaborate across an open message bus to invent new merchandise concepts. Every placement is checked against USPTO and copyright databases BEFORE reaching your approval.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = { viewModel.pitchNewProductIdeas() },
+                            enabled = !isPitchingIdeas,
+                            modifier = Modifier.weight(1f).testTag("swarm_pitch_ideas_button")
+                        ) {
+                            if (isPitchingIdeas) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Brainstorming...", fontSize = 12.sp)
+                            } else {
+                                Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pitch New Ideas", fontSize = 12.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = onNavigateToApprovals,
+                            modifier = Modifier.weight(1f).testTag("view_pitches_approvals_button")
+                        ) {
+                            Icon(Icons.Default.PendingActions, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Pending Approvals", fontSize = 12.sp)
+                        }
+                    }
+
+                    if (trademarkChecks.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Recent Trademark Clearance Audits",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        trademarkChecks.take(2).forEach { tm ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = tm.assetTitle, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                        Text(text = tm.trademarkCollisions, style = MaterialTheme.typography.bodySmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text(tm.clearanceHash.take(12), fontSize = 10.sp) },
+                                        leadingIcon = { Icon(Icons.Default.Check, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(12.dp)) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Autonomous Digital Products Studio ($0 Cost • 100% Net Profit)
+        item {
+            val digitalProducts by viewModel.digitalProducts.collectAsState()
+            val isGeneratingDigitalProduct by viewModel.isGeneratingDigitalProduct.collectAsState()
+            val digitalProductStatusMessage by viewModel.digitalProductStatusMessage.collectAsState()
+            val secretStatus by viewModel.secretStatus.collectAsState()
+            var selectedCategory by remember { mutableStateOf("PROMPT_GUIDE") }
+            var customNicheInput by remember { mutableStateOf("") }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("digital_products_studio_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(ProfitGreen.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, tint = ProfitGreen)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Digital Products Studio",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "\$0 COGS • 100% Pure Profit • Instant Download",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ProfitGreen
+                                )
+                            }
+                        }
+                        AssistChip(
+                            onClick = { },
+                            label = { Text("${digitalProducts.size} Products") },
+                            leadingIcon = { Icon(Icons.Default.LocalOffer, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(14.dp)) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Instruct the AI swarm to formulate high-margin digital products (AI prompt books, Notion operating systems, vector asset kits, and micro-SaaS boilerplates). The agents write the files, create Stripe payment links, host on GitHub Pages, and audit trademarks before asking your approval.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // API Gateway Status Pills
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(if (secretStatus.isGitHubConfigured) ProfitGreen else Color(0xFFF59E0B), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "GitHub: ${if (secretStatus.isGitHubConfigured) secretStatus.githubTokenMasked else "Blueprint Mode"}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(if (secretStatus.isStripeConfigured) ProfitGreen else Color(0xFFF59E0B), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Stripe: ${if (secretStatus.isStripeConfigured) secretStatus.stripeSecretKeyMasked else "Sandbox Links"}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Select Digital Product Blueprint:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "PROMPT_GUIDE" to "AI Prompts",
+                            "NOTION_SYSTEM" to "Notion OS",
+                            "GRAPHIC_PACK" to "Vector SVG",
+                            "EBOOK" to "E-Book",
+                            "CODE_TEMPLATE" to "Micro-SaaS"
+                        ).forEach { (catKey, label) ->
+                            FilterChip(
+                                selected = selectedCategory == catKey,
+                                onClick = { selectedCategory = catKey },
+                                label = { Text(label, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customNicheInput,
+                        onValueChange = { customNicheInput = it },
+                        label = { Text("Target Topic or Audience") },
+                        placeholder = { Text("e.g. AI Content Creation, Solopreneur Finance, Cyberpunk Art") },
+                        modifier = Modifier.fillMaxWidth().testTag("digital_niche_input"),
+                        singleLine = true
+                    )
+
+                    if (digitalProductStatusMessage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = digitalProductStatusMessage ?: "", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.generateDigitalProduct(
+                                niche = customNicheInput.ifBlank { "Solopreneur & AI Automation" },
+                                category = selectedCategory
+                            )
+                            customNicheInput = ""
+                        },
+                        enabled = !isGeneratingDigitalProduct,
+                        modifier = Modifier.fillMaxWidth().testTag("generate_digital_product_button")
+                    ) {
+                        if (isGeneratingDigitalProduct) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Formulating & Uploading Digital Product...")
+                        } else {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Create & Upload Digital Product ($0 COGS)")
+                        }
+                    }
+
+                    if (digitalProducts.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Active Digital Products Catalog (100% Margin)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        digitalProducts.forEach { item ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("digital_product_item_${item.id}")
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(text = item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                            Text(text = "${item.category} • ${item.fileFormat}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                        }
+                                        Text(
+                                            text = "$${"%.2f".format(item.priceCents / 100.0)}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ProfitGreen
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Sales: ${item.salesCount} (Earned: $${"%.2f".format(item.totalRevenueCents / 100.0)})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+
+                                        AssistChip(
+                                            onClick = { },
+                                            label = { Text("USPTO Cleared", fontSize = 10.sp) },
+                                            leadingIcon = { Icon(Icons.Default.Verified, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(12.dp)) }
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { viewModel.recordDigitalProductSale(item.id) },
+                                            modifier = Modifier.weight(1f).testTag("test_sale_button_${item.id}")
+                                        ) {
+                                            Icon(Icons.Default.PointOfSale, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Record Sale (+$${"%.2f".format(item.priceCents / 100.0)})", fontSize = 11.sp)
+                                        }
+
+                                        if (item.status != "PUBLISHED_LIVE") {
+                                            FilledTonalButton(
+                                                onClick = { viewModel.publishDigitalProduct(item.id) },
+                                                modifier = Modifier.testTag("publish_live_button_${item.id}")
+                                            ) {
+                                                Text("Publish Live", fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Autonomous Execution Entry Console
         item {
             Card(

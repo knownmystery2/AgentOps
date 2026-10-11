@@ -1,8 +1,8 @@
 package com.example.agentops.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.opensource.autonomous.agent.ui.MainViewModel as BaseMainViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +11,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(application: Application) : BaseMainViewModel(application) {
 
     private val client = OkHttpClient()
 
@@ -20,9 +20,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isDeveloperMode = MutableStateFlow(false)
     val isDeveloperMode: StateFlow<Boolean> = _isDeveloperMode.asStateFlow()
-
-    private val _daemonState = MutableStateFlow("ACTIVE")
-    val daemonState: StateFlow<String> = _daemonState.asStateFlow()
 
     private val _cronInterval = MutableStateFlow("Every 5 min")
     val cronInterval: StateFlow<String> = _cronInterval.asStateFlow()
@@ -33,11 +30,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _pingResult = MutableStateFlow<String>("Not Tested")
     val pingResult: StateFlow<String> = _pingResult.asStateFlow()
 
-    fun updateBaseUrl(newUrl: String) { _baseUrl.value = newUrl }
+    fun updateBaseUrl(newUrl: String) { 
+        _baseUrl.value = newUrl 
+        val current = settings.value
+        if (current != null) {
+            updateSettings(current.copy(backendServerEndpoint = newUrl))
+        }
+    }
+
     fun toggleDeveloperMode(enabled: Boolean) { _isDeveloperMode.value = enabled }
-    fun updateDaemonState(state: String) { _daemonState.value = state }
-    fun updateCronInterval(interval: String) { _cronInterval.value = interval }
-    fun updateConcurrency(threads: Int) { _concurrencyThreads.value = threads }
+    fun updateDaemonState(state: String) { setDaemonState(state) }
+    fun updateCronInterval(interval: String) { 
+        _cronInterval.value = interval
+        setCronSchedule(interval)
+    }
+    fun updateConcurrency(threads: Int) { 
+        _concurrencyThreads.value = threads
+        workerConcurrency.value = threads
+    }
 
     fun runLivePingTest() {
         viewModelScope.launch {

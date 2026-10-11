@@ -31,12 +31,30 @@ data class MarketingBundle(
     val emailBody: String
 )
 
-class MainViewModel(
-    private val db: AppDatabase,
-    private val repository: AgentRepository = AgentRepository(db)
+open class MainViewModel(
+    val db: AppDatabase,
+    val repository: AgentRepository = AgentRepository(db)
 ) : ViewModel() {
 
+    constructor(application: android.app.Application) : this(
+        AppDatabase.getInstance(application)
+    )
+
+    private var webhookServer: com.opensource.autonomous.agent.network.LocalWebhookServer? = null
+
+    init {
+        try {
+            webhookServer = com.opensource.autonomous.agent.network.LocalWebhookServer(port = 8080, db = db).also { it.start() }
+        } catch (_: Exception) {}
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        webhookServer?.stop()
+    }
+
     private val ollamaClient = OllamaClient()
+    val orchestrator = com.opensource.autonomous.agent.engine.MultiAgentOrchestrator(db, repository)
     private val appStartElapsedRealtime = SystemClock.elapsedRealtime()
     private val appStartTimestamp = System.currentTimeMillis()
 
@@ -45,6 +63,9 @@ class MainViewModel(
     // -----------------------------------------------------------------
     val agents: StateFlow<List<AgentEntity>> = repository.getAllAgents()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val autonomousAgents: StateFlow<List<AutonomousAgent>> = repository.getAutonomousAgents()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AutonomousAgent.DEFAULT_SWARM)
 
     val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -72,6 +93,27 @@ class MainViewModel(
 
     val settings: StateFlow<SettingsEntity?> = repository.getSettings()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val storefronts: StateFlow<List<StorefrontEntity>> = repository.getStorefronts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val trademarkChecks: StateFlow<List<TrademarkCheckEntity>> = repository.getTrademarkChecks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val agentMessages: StateFlow<List<AgentMessageEntity>> = repository.getAgentMessages()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val secretManager: SecretManager = orchestrator.secretManager
+    val secretStatus: StateFlow<SecretStatus> = secretManager.secretStatus
+
+    val digitalProducts: StateFlow<List<DigitalProductEntity>> = repository.getDigitalProducts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val isDeployingStorefront = MutableStateFlow(false)
+    val storefrontDeploymentStatus = MutableStateFlow<String?>(null)
+    val isPitchingIdeas = MutableStateFlow(false)
+    val isGeneratingDigitalProduct = MutableStateFlow(false)
+    val digitalProductStatusMessage = MutableStateFlow<String?>(null)
 
     // -----------------------------------------------------------------
     // Network & Polling Reactive States
@@ -190,6 +232,13 @@ class MainViewModel(
         }
     }
 
+    fun setAgentStatus(id: String, status: AgentStatus) {
+        viewModelScope.launch {
+            repository.updateAgentStatus(id, status)
+            deriveLocalSwarmState()
+        }
+    }
+
     // =========================================================================
     // 1. CONSOLE MODULE: Live Logging, Uptime & Queue Counters
     // =========================================================================
@@ -257,6 +306,23 @@ class MainViewModel(
 
             repository.postDecisionAction(endpoint, id, "APPROVED")
             repository.updateDecisionStatus(id, "APPROVED")
+
+            // Automatically activate linked Storefronts and Digital Products
+            val decision = decisions.value.find { it.id == id }
+            if (decision != null) {
+                try {
+                    val json = org.json.JSONObject(decision.payloadJson)
+                    if (json.has("storeId")) {
+                        val storeId = json.getString("storeId")
+                        repository.updateStorefrontStatus(storeId, "LAUNCHED")
+                    }
+                    if (json.has("productId")) {
+                        val productId = json.getString("productId")
+                        repository.updateDigitalProductStatus(productId, "PUBLISHED_LIVE")
+                    }
+                } catch (_: Exception) {}
+            }
+
             repository.insertLog(
                 LogEntity(
                     agentId = "Orchestrator Agent",
@@ -588,12 +654,25 @@ class MainViewModel(
             ollamaClient.model = newSettings.ollamaModel
             repository.insertLog(
                 LogEntity(
-                    agentId = "Reliability Agent",
-                    message = "Settings updated. Endpoint: ${newSettings.backendServerEndpoint}.",
+                    agentId = "System Settings",
+                    message = "All functional settings updated and persisted successfully.",
                     timestamp = System.currentTimeMillis()
                 )
             )
             pollLiveBackgroundServer()
+        }
+    }
+
+    fun resetSettingsToDefault() {
+        viewModelScope.launch {
+            repository.saveSettings(SettingsEntity())
+            repository.insertLog(
+                LogEntity(
+                    agentId = "System Settings",
+                    message = "All functional settings reset to default baseline.",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
         }
     }
 
@@ -740,20 +819,31 @@ class MainViewModel(
     }
 
     fun viewRawJsonSchema() {
+        val current = settings.value ?: SettingsEntity()
         rawJsonSchemaDialogContent.value = """
         {
           "database": "agent_biz.db",
-          "version": 3,
-          "tables": {
-            "agents": ["id (PK)", "name", "role", "systemPrompt", "isActive"],
-            "tasks": ["id (PK)", "assignedToAgentId", "title", "instruction", "status", "result", "timestamp"],
-            "decisions": ["id (PK)", "agentSource", "description", "payloadJson", "status", "timestamp"],
-            "logs": ["id (PK)", "agentId", "message", "timestamp"],
-            "ledger_entries": ["id (PK)", "timestamp", "code", "store", "platform", "description", "accountDebit", "accountCredit", "amountCents", "hashToken", "category"],
-            "dropship_catalog": ["id (PK)", "title", "niche", "supplierName", "costCents", "retailPriceCents", "feeCents", "profitCents", "shippingDays", "supplierRating", "zeroUpfrontCost", "inShortlist"],
-            "account_tasks": ["id (PK)", "platform", "title", "instructions", "taskType", "isCompleted", "priority"],
-            "standby_providers": ["id (PK)", "serviceName", "tierType", "status", "quotaPercentUsed", "accountAlias", "endpointUrl"],
-            "business_settings": ["id (PK)", "globalAutomationActive", "backendServerEndpoint", "ollamaEndpoint", "keyGithub", "keyStripe", "bypassApprovals"]
+          "version": 6,
+          "tables": [
+            "agents", "tasks", "decisions", "logs", "ledger_entries",
+            "dropship_catalog", "account_tasks", "standby_providers",
+            "business_settings", "knowledge_base", "storefronts",
+            "trademark_checks", "agent_messages", "digital_products"
+          ],
+          "active_preferences": {
+            "business_name": "${current.businessName}",
+            "operator_alias": "${current.operatorAlias}",
+            "theme_mode": "${current.themeMode}",
+            "accent_color": "${current.accentColor}",
+            "currency": "${current.currencySymbol}",
+            "global_automation": ${current.globalAutomationActive},
+            "risk_level": "${current.riskLevel}",
+            "min_margin_percent": ${current.minMarginPercent},
+            "storefront_provider": "${current.storefrontProvider}",
+            "strict_copyright": ${current.strictCopyrightCheck},
+            "trademark_threshold": ${current.trademarkConfidenceMin},
+            "push_notifications": ${current.pushNotificationsActive},
+            "local_storage_only": ${current.localOnlyStorage}
           }
         }
         """.trimIndent()
@@ -777,5 +867,190 @@ class MainViewModel(
             emailSubject = "Early Look: The New $niche Capsule Is Live",
             emailBody = "Hey friend,\n\nWe just dropped something special: our curated $niche edition.\n\nClaim yours before this small-batch run sells out."
         )
+    }
+
+    // =========================================================================
+    // 9. AUTONOMOUS STOREFRONT & MULTI-AGENT ORCHESTRATION PIPELINES
+    // =========================================================================
+
+    /**
+     * Requests the multi-agent team to launch a full zero-cost storefront for a specified business.
+     * Checks trademarks, sets up GitHub Pages, binds Stripe payments, and gates production launch behind human approval.
+     */
+    fun requestZeroCostStorefront(companyName: String, businessNiche: String) {
+        if (companyName.isBlank()) return
+        isDeployingStorefront.value = true
+        storefrontDeploymentStatus.value = "Assembling multi-agent deployment team..."
+        viewModelScope.launch {
+            try {
+                storefrontDeploymentStatus.value = "Conducting USPTO & copyright pre-clearance..."
+                val githubKey = settings.value?.keyGithub ?: ""
+                val stripeKey = settings.value?.keyStripe ?: ""
+
+                val result = orchestrator.createZeroCostStorefront(
+                    companyName = companyName,
+                    businessNiche = businessNiche.ifBlank { "Curated Apparel & Digital Merch" },
+                    githubToken = githubKey,
+                    stripeKey = stripeKey
+                )
+
+                if (result.isSuccess) {
+                    val store = result.getOrNull()
+                    storefrontDeploymentStatus.value = "Storefront '${store?.companyName}' created at \$0 cost! Awaiting your approval in Approvals Queue."
+                } else {
+                    storefrontDeploymentStatus.value = "Setup alert: ${result.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                storefrontDeploymentStatus.value = "Deployment error: ${e.localizedMessage}"
+            } finally {
+                isDeployingStorefront.value = false
+            }
+        }
+    }
+
+    /**
+     * Triggers multi-agent collaborative brainstorming:
+     * Agents communicate across the message bus to pitch new zero-cost product or merchandise ideas,
+     * pre-screen against trademark collisions, and present the final proposal for user approval.
+     */
+    fun pitchNewProductIdeas(customNiche: String = "") {
+        if (isPitchingIdeas.value) return
+        isPitchingIdeas.value = true
+        viewModelScope.launch {
+            try {
+                val niche = customNiche.ifBlank { "Minimalist Vintage 70s Botanical" }
+                val result = orchestrator.orchestratePitchBrainstorm(niche)
+                if (result.isSuccess) {
+                    val decision = result.getOrNull()
+                    repository.insertLog(
+                        LogEntity(
+                            agentId = "Orchestrator Agent",
+                            message = "Multi-agent pitch synthesized: '${decision?.description}'. Placed in Approvals Queue.",
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                repository.insertLog(
+                    LogEntity(
+                        agentId = "Compliance Agent",
+                        message = "Pitch rejected: ${e.localizedMessage}",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            } finally {
+                isPitchingIdeas.value = false
+            }
+        }
+    }
+
+    /**
+     * Runs standalone trademark and copyright audit on any prospective title or design.
+     */
+    fun runTrademarkAudit(title: String, category: String = "POD_DESIGN") {
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            orchestrator.verifyTrademarkAndCopyright(title, category)
+        }
+    }
+
+    // =========================================================================
+    // 10. DIGITAL PRODUCTS & DIRECT MONETIZATION
+    // =========================================================================
+
+    /**
+     * Autonomous Digital Product Creation and Publishing:
+     * Generates a 100% margin digital asset ($0 COGS), verifies USPTO trademark status,
+     * provisions Stripe payment link, deploys to GitHub repo/pages, and queues human approval.
+     */
+    fun generateDigitalProduct(niche: String, category: String = "PROMPT_GUIDE", companyName: String = "Autonomous Labs") {
+        if (isGeneratingDigitalProduct.value) return
+        isGeneratingDigitalProduct.value = true
+        digitalProductStatusMessage.value = "Multi-agent swarm formulating $category asset..."
+        viewModelScope.launch {
+            try {
+                val result = orchestrator.generateAndPublishDigitalProduct(
+                    niche = niche.ifBlank { "Solopreneur & AI Automation" },
+                    category = category,
+                    companyName = companyName.ifBlank { "Autonomous Labs" }
+                )
+                if (result.isSuccess) {
+                    val prod = result.getOrNull()
+                    digitalProductStatusMessage.value = "Created '${prod?.title}'! Ready for sign-off in Approvals."
+                } else {
+                    digitalProductStatusMessage.value = "Product note: ${result.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                digitalProductStatusMessage.value = "Error: ${e.localizedMessage}"
+            } finally {
+                isGeneratingDigitalProduct.value = false
+            }
+        }
+    }
+
+    /**
+     * Publishes a digital product to live status after human approval.
+     */
+    fun publishDigitalProduct(productId: String) {
+        viewModelScope.launch {
+            repository.updateDigitalProductStatus(productId, "PUBLISHED_LIVE")
+            repository.insertLog(
+                LogEntity(
+                    agentId = "1",
+                    message = "Digital product '$productId' published live to storefront.",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    /**
+     * Records or simulates a customer checkout sale for a digital product:
+     * Updates digital product sales count, total revenue, and writes a $0 COGS (100% net margin)
+     * entry directly into the Ledger.
+     */
+    fun recordDigitalProductSale(productId: String) {
+        viewModelScope.launch {
+            val product = db.digitalProductDao().getProductById(productId) ?: return@launch
+            repository.recordDigitalSale(productId)
+
+            // Digital products have $0 physical manufacturing costs. Only card processing fee:
+            val feeCents = ((product.priceCents * 0.029) + 30).toLong()
+            val netProfitCents = product.priceCents - feeCents
+
+            val ledgerEntry = LedgerEntity(
+                timestamp = System.currentTimeMillis(),
+                code = "TX-DIGI-${System.currentTimeMillis() % 100000}",
+                store = "Autonomous Digital Storefront",
+                platform = "Stripe Direct Checkout",
+                description = "Customer Purchase: ${product.title} (Instant Download)",
+                accountDebit = "1010 Stripe Clearing",
+                accountCredit = "4010 Digital Product Revenue",
+                amountCents = product.priceCents,
+                hashToken = "0x" + UUID.randomUUID().toString().take(12),
+                category = "SALE"
+            )
+            repository.insertLedgerEntry(ledgerEntry)
+
+            repository.insertLog(
+                LogEntity(
+                    agentId = "7",
+                    message = "Customer Sale Confirmed: '${product.title}' for \$${"%.2f".format(product.priceCents / 100.0)}. Net profit: \$${"%.2f".format(netProfitCents / 100.0)} (100% Margin).",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    fun updateGitHubToken(token: String) {
+        viewModelScope.launch {
+            secretManager.saveGitHubToken(token)
+        }
+    }
+
+    fun updateStripeSecretKey(key: String) {
+        viewModelScope.launch {
+            secretManager.saveStripeSecretKey(key)
+        }
     }
 }

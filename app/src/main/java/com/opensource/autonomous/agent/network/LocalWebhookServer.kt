@@ -298,6 +298,54 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                             sendJsonResponse(writer, 200, """{"status":"dispatched","timestamp":$now}""")
                         }
 
+                        // Root Backend Info & Health GET
+                        method == "GET" && (path == "/" || path == "/api") -> {
+                            val infoObj = JsonObject().apply {
+                                addProperty("status", "ONLINE")
+                                addProperty("engine", "Autonomous Multi-Agent Backend & Storefront Server")
+                                addProperty("port", port)
+                                addProperty("timestamp", now)
+                                addProperty("version", "2.1.0")
+                            }
+                            sendJsonResponse(writer, 200, gson.toJson(infoObj))
+                        }
+
+                        // Stripe Payment Webhook Listener
+                        method == "POST" && path.startsWith("/webhook/stripe") -> {
+                            val rootJson = try {
+                                gson.fromJson(postData, JsonObject::class.java)
+                            } catch (_: Exception) {
+                                JsonObject()
+                            }
+                            val eventType = rootJson.get("type")?.asString ?: "checkout.session.completed"
+                            val dataObj = rootJson.getAsJsonObject("data")?.getAsJsonObject("object")
+                            val amountTotal = dataObj?.get("amount_total")?.asLong ?: 4900L
+                            val customerEmail = dataObj?.get("customer_details")?.asJsonObject?.get("email")?.asString ?: "customer@example.com"
+
+                            db.logDao().insertLog(
+                                LogEntity(
+                                    agentId = "Finance Agent",
+                                    message = "Stripe Webhook processed: $eventType for $customerEmail (Gross: $${amountTotal / 100.0})",
+                                    timestamp = now
+                                )
+                            )
+                            db.ledgerDao().insertEntry(
+                                LedgerEntity(
+                                    timestamp = now,
+                                    code = "TX-STRIPE-${now % 100000}",
+                                    store = "Autonomous Storefront",
+                                    platform = "Stripe Webhook",
+                                    description = "Storefront Stripe sale: $eventType ($customerEmail)",
+                                    accountDebit = "1010 Stripe Clearing",
+                                    accountCredit = "4010 Digital Product Revenue",
+                                    amountCents = amountTotal,
+                                    hashToken = "0x" + UUID.randomUUID().toString().take(12),
+                                    category = "SALE"
+                                )
+                            )
+                            sendJsonResponse(writer, 200, """{"received":true,"event":"$eventType","timestamp":$now}""")
+                        }
+
                         // Inbound CRM Support Webhook
                         method == "POST" && path.startsWith("/webhook/support") -> {
                             val rootJson = try {

@@ -20,8 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
-import com.opensource.autonomous.agent.data.DecisionEntity
-import com.opensource.autonomous.agent.data.LogEntity
+import com.opensource.autonomous.agent.data.*
 import com.opensource.autonomous.agent.network.SwarmAgentStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -261,14 +260,18 @@ fun LiveAgentStatusCard(
     viewModel: MainViewModel,
     onDispatchDirective: () -> Unit
 ) {
-    val isActive = agent.status == "ACTIVE" || agent.status == "RUNNING"
+    val operationalRole = remember(agent.role) { OperationalRole.fromRoleString(agent.role) }
+    val currentStatus = remember(agent.status) { AgentStatus.fromString(agent.status) }
+    val isActive = currentStatus.isActive
     val statusColor = if (isActive) ProfitGreen else Color(0xFFF59E0B)
     val icon = when {
         agent.name.contains("Orchestrator") || agent.name.contains("CEO") -> Icons.Default.AccountBox
         agent.name.contains("Scout") || agent.name.contains("Research") -> Icons.Default.Search
+        agent.name.contains("Brand") -> Icons.Default.AutoAwesome
         agent.name.contains("Design") || agent.name.contains("Product") -> Icons.Default.Build
         agent.name.contains("Marketing") -> Icons.Default.Share
         agent.name.contains("Listing") || agent.name.contains("Content") -> Icons.Default.Edit
+        agent.name.contains("Dropship") || agent.name.contains("Sourcing") -> Icons.Default.ShoppingCart
         agent.name.contains("Customer") || agent.name.contains("Support") -> Icons.Default.Call
         agent.name.contains("Finance") -> Icons.Default.AttachMoney
         agent.name.contains("Compliance") -> Icons.Default.Shield
@@ -290,7 +293,11 @@ fun LiveAgentStatusCard(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(agent.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                    Text(agent.role, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "${operationalRole.title} • ${operationalRole.department.code}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Surface(
                     shape = RoundedCornerShape(6.dp),
@@ -307,7 +314,7 @@ fun LiveAgentStatusCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = agent.status,
+                            text = currentStatus.label.uppercase(),
                             color = statusColor,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall
@@ -318,7 +325,7 @@ fun LiveAgentStatusCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Active Task Allocation & Execution Heartbeat
+            // Operational Role Department & Responsibilities
             Surface(
                 shape = RoundedCornerShape(6.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
@@ -330,20 +337,30 @@ fun LiveAgentStatusCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Active Allocation:",
+                            text = operationalRole.department.departmentName,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Model: ${agent.model}",
                             style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = agent.currentTask,
+                        text = operationalRole.description,
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Directive: ${agent.currentTask}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -357,17 +374,43 @@ fun LiveAgentStatusCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Latency: ${agent.latencyMs}ms",
+                            text = if (isActive) "Status: LIVE ACTIVE" else "Status: STANDBY POOL",
                             style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
-                            color = ProfitGreen
+                            color = statusColor
                         )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Status Toggle Button (Active <-> Standby)
+                TextButton(
+                    onClick = {
+                        val nextStatus = if (isActive) AgentStatus.STANDBY else AgentStatus.ACTIVE
+                        viewModel.setAgentStatus(agent.id, nextStatus)
+                    },
+                    modifier = Modifier.testTag("toggle_status_${agent.id}")
+                ) {
+                    Icon(
+                        if (isActive) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (isActive) Color(0xFFF59E0B) else ProfitGreen
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        if (isActive) "Switch to Standby" else "Switch to Active",
+                        fontSize = 12.sp,
+                        color = if (isActive) Color(0xFFF59E0B) else ProfitGreen
+                    )
+                }
+
                 TextButton(onClick = onDispatchDirective) {
                     Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))

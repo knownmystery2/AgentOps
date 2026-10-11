@@ -119,6 +119,9 @@ interface SettingsDao {
     @Query("SELECT * FROM business_settings WHERE id = 1 LIMIT 1")
     fun getSettings(): Flow<SettingsEntity?>
 
+    @Query("SELECT * FROM business_settings WHERE id = 1 LIMIT 1")
+    suspend fun getSettingsSync(): SettingsEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveSettings(settings: SettingsEntity)
 }
@@ -130,5 +133,80 @@ interface KnowledgeDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertKnowledge(knowledge: KnowledgeEntity)
+}
+
+@Dao
+interface StorefrontDao {
+    @Query("SELECT * FROM storefronts ORDER BY createdAt DESC")
+    fun getAllStorefronts(): Flow<List<StorefrontEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStorefront(storefront: StorefrontEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStorefronts(storefronts: List<StorefrontEntity>)
+
+    @Query("UPDATE storefronts SET status = :status WHERE id = :id")
+    suspend fun updateStorefrontStatus(id: String, status: String)
+
+    @Query("SELECT * FROM storefronts WHERE id = :id")
+    suspend fun getStorefrontById(id: String): StorefrontEntity?
+}
+
+@Dao
+interface TrademarkDao {
+    @Query("SELECT * FROM trademark_checks ORDER BY checkedTimestamp DESC")
+    fun getAllChecks(): Flow<List<TrademarkCheckEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCheck(check: TrademarkCheckEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChecks(checks: List<TrademarkCheckEntity>)
+
+    @Query("SELECT * FROM trademark_checks WHERE id = :id")
+    suspend fun getCheckById(id: String): TrademarkCheckEntity?
+}
+
+@Dao
+interface AgentMessageDao {
+    @Query("SELECT * FROM agent_messages ORDER BY timestamp DESC")
+    fun getAllMessages(): Flow<List<AgentMessageEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessage(message: AgentMessageEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessages(messages: List<AgentMessageEntity>)
+
+    @Query("DELETE FROM agent_messages")
+    suspend fun clearMessages()
+}
+
+@Dao
+interface DigitalProductDao {
+    @Query("SELECT * FROM digital_products ORDER BY createdAt DESC")
+    fun getAllProducts(): Flow<List<DigitalProductEntity>>
+
+    @Query("SELECT * FROM digital_products WHERE status = 'PUBLISHED_LIVE' ORDER BY createdAt DESC")
+    fun getPublishedProducts(): Flow<List<DigitalProductEntity>>
+
+    @Query("SELECT * FROM digital_products WHERE id = :id LIMIT 1")
+    suspend fun getProductById(id: String): DigitalProductEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProduct(product: DigitalProductEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProducts(products: List<DigitalProductEntity>)
+
+    @Update
+    suspend fun updateProduct(product: DigitalProductEntity)
+
+    @Query("UPDATE digital_products SET status = :status WHERE id = :id")
+    suspend fun updateProductStatus(id: String, status: String)
+
+    @Query("UPDATE digital_products SET salesCount = salesCount + 1, totalRevenueCents = totalRevenueCents + priceCents WHERE id = :id")
+    suspend fun recordSale(id: String)
 }
 

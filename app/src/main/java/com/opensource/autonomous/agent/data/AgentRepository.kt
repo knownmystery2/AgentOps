@@ -7,6 +7,7 @@ import com.opensource.autonomous.agent.network.PodJobItem
 import com.opensource.autonomous.agent.network.SwarmAgentStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import javax.crypto.Mac
@@ -91,6 +92,20 @@ class AgentRepository(
     // Room Flow Data Streams
     // -------------------------------------------------------------
     fun getAllAgents(): Flow<List<AgentEntity>> = db.agentDao().getAllAgents()
+    fun getAutonomousAgents(): Flow<List<AutonomousAgent>> = db.agentDao().getAllAgents().map { list ->
+        if (list.isEmpty()) {
+            AutonomousAgent.DEFAULT_SWARM
+        } else {
+            list.map { AutonomousAgent.fromEntity(it) }
+        }
+    }
+
+    suspend fun updateAgentStatus(id: String, status: AgentStatus) = withContext(Dispatchers.IO) {
+        val existing = db.agentDao().getAgentById(id)
+        if (existing != null) {
+            db.agentDao().insertAgent(existing.copy(isActive = status.isActive))
+        }
+    }
     fun getAllTasks(): Flow<List<TaskEntity>> = db.taskDao().getAllTasks()
     fun getPendingDecisions(): Flow<List<DecisionEntity>> = db.decisionDao().getPendingDecisions()
     fun getAllDecisions(): Flow<List<DecisionEntity>> = db.decisionDao().getAllDecisions()
@@ -100,6 +115,39 @@ class AgentRepository(
     fun getAccountTasks(): Flow<List<AccountTaskEntity>> = db.accountTaskDao().getAllTasks()
     fun getProviders(): Flow<List<StandbyProviderEntity>> = db.providerDao().getAllProviders()
     fun getSettings(): Flow<SettingsEntity?> = db.settingsDao().getSettings()
+    fun getStorefronts(): Flow<List<StorefrontEntity>> = db.storefrontDao().getAllStorefronts()
+    fun getTrademarkChecks(): Flow<List<TrademarkCheckEntity>> = db.trademarkDao().getAllChecks()
+    fun getAgentMessages(): Flow<List<AgentMessageEntity>> = db.agentMessageDao().getAllMessages()
+    fun getDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getAllProducts()
+    fun getPublishedDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getPublishedProducts()
+
+    suspend fun insertDigitalProduct(product: DigitalProductEntity) = withContext(Dispatchers.IO) {
+        db.digitalProductDao().insertProduct(product)
+    }
+
+    suspend fun updateDigitalProductStatus(id: String, status: String) = withContext(Dispatchers.IO) {
+        db.digitalProductDao().updateProductStatus(id, status)
+    }
+
+    suspend fun recordDigitalSale(id: String) = withContext(Dispatchers.IO) {
+        db.digitalProductDao().recordSale(id)
+    }
+
+    suspend fun insertStorefront(storefront: StorefrontEntity) = withContext(Dispatchers.IO) {
+        db.storefrontDao().insertStorefront(storefront)
+    }
+
+    suspend fun updateStorefrontStatus(id: String, status: String) = withContext(Dispatchers.IO) {
+        db.storefrontDao().updateStorefrontStatus(id, status)
+    }
+
+    suspend fun insertTrademarkCheck(check: TrademarkCheckEntity) = withContext(Dispatchers.IO) {
+        db.trademarkDao().insertCheck(check)
+    }
+
+    suspend fun insertAgentMessage(message: AgentMessageEntity) = withContext(Dispatchers.IO) {
+        db.agentMessageDao().insertMessage(message)
+    }
 
     // -------------------------------------------------------------
     // Local Persistence Operations
@@ -130,6 +178,10 @@ class AgentRepository(
 
     suspend fun updateTaskStatus(id: String, status: String, result: String?) = withContext(Dispatchers.IO) {
         db.taskDao().updateTaskStatus(id, status, result)
+    }
+
+    suspend fun insertLedgerEntry(entry: LedgerEntity) = withContext(Dispatchers.IO) {
+        db.ledgerDao().insertEntry(entry)
     }
 
     suspend fun insertLedgerEntries(entries: List<LedgerEntity>) = withContext(Dispatchers.IO) {
