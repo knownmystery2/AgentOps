@@ -120,9 +120,18 @@ class AgentRepository(
     fun getAgentMessages(): Flow<List<AgentMessageEntity>> = db.agentMessageDao().getAllMessages()
     fun getDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getAllProducts()
     fun getPublishedDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getPublishedProducts()
+    fun getPendingDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getProductsByStatus("AWAITING_HUMAN_APPROVAL")
+
+    suspend fun clearAllDemoData() = withContext(Dispatchers.IO) {
+        AppDatabase.purgeAllDemoData(db)
+    }
 
     suspend fun insertDigitalProduct(product: DigitalProductEntity) = withContext(Dispatchers.IO) {
         db.digitalProductDao().insertProduct(product)
+    }
+
+    suspend fun deleteDigitalProduct(id: String) = withContext(Dispatchers.IO) {
+        db.digitalProductDao().deleteProduct(id)
     }
 
     suspend fun updateDigitalProductStatus(id: String, status: String) = withContext(Dispatchers.IO) {
@@ -275,4 +284,26 @@ class AgentRepository(
             md.digest((payload + secret).toByteArray()).take(8).joinToString("") { "%02x".format(it) }.uppercase()
         }
     }
+
+    // -------------------------------------------------------------
+    // Interceptor Architecture ("God" Overseer) Methods
+    // -------------------------------------------------------------
+    fun getGodVerdicts(): Flow<List<GodAuditVerdictEntity>> = db.godAuditDao().getAllVerdicts()
+
+    fun getGodHaltedVerdicts(): Flow<List<GodAuditVerdictEntity>> = db.godAuditDao().getHaltedVerdicts()
+
+    fun getGodLatestVerdict(): Flow<GodAuditVerdictEntity?> = db.godAuditDao().getLatestVerdict()
+
+    fun getGodTotalInterceptCount(): Flow<Int> = db.godAuditDao().getTotalInterceptCount()
+
+    fun getGodHaltedCount(): Flow<Int> = db.godAuditDao().getHaltedCount()
+
+    suspend fun insertGodVerdict(verdict: GodAuditVerdictEntity) = withContext(Dispatchers.IO) {
+        db.godAuditDao().insertVerdict(verdict)
+    }
+
+    suspend fun clearGodVerdicts() = withContext(Dispatchers.IO) {
+        db.godAuditDao().clearVerdicts()
+    }
 }
+

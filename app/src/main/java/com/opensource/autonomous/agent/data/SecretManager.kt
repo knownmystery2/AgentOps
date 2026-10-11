@@ -16,23 +16,20 @@ data class SecretStatus(
     val isGitHubConfigured: Boolean = false,
     val isStripeConfigured: Boolean = false,
     val isStripePublishableConfigured: Boolean = false,
+    val isGeminiConfigured: Boolean = false,
     val githubTokenMasked: String = "Not Configured",
     val stripeSecretKeyMasked: String = "Not Configured",
     val stripePublishableKeyMasked: String = "Not Configured",
+    val geminiApiKeyMasked: String = "Not Configured",
     val githubSource: String = "None", // "AI Studio Secrets / BuildConfig" or "Device Local Settings"
-    val stripeSource: String = "None"
+    val stripeSource: String = "None",
+    val geminiSource: String = "None"
 )
 
 /**
  * SecretManager is a secure repository module responsible for managing and retrieving
- * credentials required for automated deployments (GitHub PAT) and payment processing (Stripe).
- *
- * It provides:
- * 1. Dual-source resolution: Priority given to on-device explicit overrides, falling back to
- *    environment credentials injected via BuildConfig / Secrets Gradle plugin.
- * 2. Automatic placeholder sanitization: Ignores template placeholder values like "placeholder_...".
- * 3. Reactive state observation: UI components observe SecretStatus live.
- * 4. Masking utilities for zero-leak UI display and logging.
+ * credentials required for automated deployments (GitHub PAT), payment processing (Stripe),
+ * and generative AI reasoning (Gemini / open source endpoints).
  */
 class SecretManager(
     private val settingsDao: SettingsDao,
@@ -51,6 +48,9 @@ class SecretManager(
 
     @Volatile
     private var cachedStripePublishableKey: String = ""
+
+    @Volatile
+    private var cachedGeminiApiKey: String = ""
 
     init {
         // Observe settings changes reactively from Room
@@ -124,19 +124,48 @@ class SecretManager(
             ""
         }
 
+        // Resolve Gemini API Key
+        val localGemini = settings?.keyGemini?.trim().orEmpty()
+        val buildConfigGemini = try {
+            BuildConfig.GEMINI_API_KEY.trim()
+        } catch (_: Throwable) {
+            ""
+        }
+
+        val effectiveGemini: String
+        val geminiSource: String
+        when {
+            localGemini.isNotBlank() -> {
+                effectiveGemini = localGemini
+                geminiSource = "Device Local Settings"
+            }
+            buildConfigGemini.isNotBlank() && !buildConfigGemini.startsWith("placeholder_") -> {
+                effectiveGemini = buildConfigGemini
+                geminiSource = "AI Studio Secrets / BuildConfig"
+            }
+            else -> {
+                effectiveGemini = ""
+                geminiSource = "Unconfigured"
+            }
+        }
+
         cachedGithubToken = effectiveGithub
         cachedStripeSecretKey = effectiveStripe
         cachedStripePublishableKey = effectiveStripePub
+        cachedGeminiApiKey = effectiveGemini
 
         _secretStatus.value = SecretStatus(
             isGitHubConfigured = effectiveGithub.isNotBlank(),
             isStripeConfigured = effectiveStripe.isNotBlank(),
             isStripePublishableConfigured = effectiveStripePub.isNotBlank(),
+            isGeminiConfigured = effectiveGemini.isNotBlank(),
             githubTokenMasked = maskSecret(effectiveGithub, prefixLength = 4, suffixLength = 4),
             stripeSecretKeyMasked = maskSecret(effectiveStripe, prefixLength = 7, suffixLength = 4),
             stripePublishableKeyMasked = maskSecret(effectiveStripePub, prefixLength = 7, suffixLength = 4),
+            geminiApiKeyMasked = maskSecret(effectiveGemini, prefixLength = 4, suffixLength = 4),
             githubSource = githubSource,
-            stripeSource = stripeSource
+            stripeSource = stripeSource,
+            geminiSource = geminiSource
         )
     }
 
@@ -166,6 +195,16 @@ class SecretManager(
     fun getStripePublishableKey(): String = cachedStripePublishableKey
 
     /**
+     * Retrieves active Gemini API Key.
+     */
+    fun getGeminiApiKey(): String = cachedGeminiApiKey
+
+    /**
+     * Checks if a valid non-placeholder Gemini API Key is present.
+     */
+    fun hasValidGeminiApiKey(): Boolean = cachedGeminiApiKey.isNotBlank()
+
+    /**
      * Saves or overrides the GitHub Personal Access Token on-device in Room.
      */
     suspend fun saveGitHubToken(token: String) = withContext(Dispatchers.IO) {
@@ -180,6 +219,15 @@ class SecretManager(
     suspend fun saveStripeSecretKey(secretKey: String) = withContext(Dispatchers.IO) {
         val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
         val updated = currentSettings.copy(keyStripe = secretKey.trim())
+        settingsDao.saveSettings(updated)
+    }
+
+    /**
+     * Saves or overrides the Gemini API Key on-device in Room.
+     */
+    suspend fun saveGeminiApiKey(apiKey: String) = withContext(Dispatchers.IO) {
+        val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
+        val updated = currentSettings.copy(keyGemini = apiKey.trim())
         settingsDao.saveSettings(updated)
     }
 

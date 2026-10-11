@@ -130,14 +130,14 @@ data class SettingsEntity(
     val bypassRateLimits: Boolean = false,
     val offlineSimulationMode: Boolean = false,
 
-    // 4. Per-Agent Model Customization (Free Tier & Local)
-    val modelCeo: String = "gemini-2.5-flash",
-    val modelResearch: String = "llama-3-70b",
-    val modelProduct: String = "mistral-large",
-    val modelMarketing: String = "llama-3-8b",
-    val modelContent: String = "groq-mixtral",
-    val modelSupport: String = "gemini-2.5-flash",
-    val modelFinance: String = "deepseek-coder",
+    // 4. Per-Agent Model Customization (100% Open Source Models & Local Engine)
+    val modelCeo: String = "llama3:8b",
+    val modelResearch: String = "llama3:8b",
+    val modelProduct: String = "mistral:7b",
+    val modelMarketing: String = "llama3:8b",
+    val modelContent: String = "mistral:7b",
+    val modelSupport: String = "mistral:7b",
+    val modelFinance: String = "deepseek-coder:6.7b",
 
     // 5. Storefront & Zero-Cost eCommerce
     val autoDeployOnApproval: Boolean = true,
@@ -251,4 +251,21 @@ data class DigitalProductEntity(
     val salesCount: Int = 0,
     val totalRevenueCents: Long = 0L,
     val createdAt: Long = System.currentTimeMillis()
+)
+
+// Interceptor Architecture ("God" Overseer) Verdict Entity
+@Entity(tableName = "god_audit_verdicts")
+data class GodAuditVerdictEntity(
+    @PrimaryKey val id: String, // UUID
+    val timestamp: Long = System.currentTimeMillis(),
+    val sourceAgent: String, // e.g. "AI Administrator", "Creative Design Agent", "DeploymentService"
+    val actionType: String, // "GITHUB_COMMIT", "GITHUB_PULL_REQUEST", "TOOL_EXECUTION", "SYSTEM_COMMAND", "STOREFRONT_DEPLOY"
+    val targetResource: String, // e.g. "repo/main/index.html", "admin_tool/post_digital_product"
+    val payloadPreview: String,
+    val status: String, // "APPROVED" or "HALTED"
+    val reason: String? = null,
+    val hazardDetected: String? = null,
+    val remediation: String? = null,
+    val isVetoed: Boolean = false,
+    val durationMs: Long = 0L
 )

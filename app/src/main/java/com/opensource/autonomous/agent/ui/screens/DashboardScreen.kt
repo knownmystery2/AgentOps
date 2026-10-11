@@ -49,6 +49,10 @@ fun DashboardScreen(
     val settings by viewModel.settings.collectAsState()
     val selectedFilter by viewModel.selectedLogFilter.collectAsState()
     val autonomousAgents by viewModel.autonomousAgents.collectAsState()
+    val isSwarmRunning by viewModel.isSwarmRunning.collectAsState()
+    val swarmStatusMessage by viewModel.swarmStatusMessage.collectAsState()
+    val activeStoreTheme by viewModel.activeStoreTheme.collectAsState()
+    val marketingPackages by viewModel.marketingPackages.collectAsState()
     var inspectingAgent by remember { mutableStateOf<AutonomousAgent?>(null) }
     var selectedDepartmentFilter by remember { mutableStateOf("ALL") }
     var showAdvancedSwarmHub by remember { mutableStateOf(false) }
@@ -191,6 +195,217 @@ fun DashboardScreen(
                             label = { Text("$pendingPhoneTasksCount Phone 2FA") },
                             modifier = Modifier.weight(1f).testTag("phone_tasks_chip")
                         )
+                    }
+                }
+            }
+        }
+
+        // The Interceptor Architecture: God Overseer Sentinel
+        item {
+            val godIntercepts by viewModel.godTotalIntercepts.collectAsState()
+            val godHalted by viewModel.godHaltedCount.collectAsState()
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (godHalted > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("god_sentinel_banner_card")
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = if (godHalted > 0) MaterialTheme.colorScheme.error else BrandEmerald,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "God: Silent Interceptor Overseer",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = (if (godHalted > 0) MaterialTheme.colorScheme.error else BrandEmerald).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = if (godHalted > 0) "$godHalted Hazards Halted" else "$godIntercepts Intercepted • Safe",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (godHalted > 0) MaterialTheme.colorScheme.error else BrandEmerald,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Silent out-of-band monitor with absolute veto power reviewing all agent actions before live execution.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // Multi-Agent Swarm Cluster (Who Talks to Whom)
+        item {
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("multi_agent_swarm_cluster_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier.size(36.dp).background(BrandEmerald.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Hub, contentDescription = null, tint = BrandEmerald)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Multi-Agent Swarm Cluster",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "4-Role Autonomous Collaboration Loop",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BrandEmerald
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = (if (isSwarmRunning) Color(0xFFF59E0B) else ProfitGreen).copy(alpha = 0.15f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(6.dp)
+                                        .background(if (isSwarmRunning) Color(0xFFF59E0B) else ProfitGreen, CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isSwarmRunning) "Swarm Active" else "Swarm Ready",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSwarmRunning) Color(0xFFF59E0B) else ProfitGreen
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Pop-Up Store Theme Banner
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Storefront, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "Active Pop-Up Store Theme", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = activeStoreTheme ?: "Pop-Up Store Awaiting Directive", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // The 4 Swarm Roles (Who Talks to Whom)
+                    Text(text = "Swarm Handoff Pipeline:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SwarmRolePill("1. Administrator AI", "The Boss / Orchestrator", Icons.Default.AdminPanelSettings, BrandEmerald)
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        SwarmRolePill("2. Trend & Identity", "Theme & 5 Concepts", Icons.Default.TrendingUp, Color(0xFF38BDF8))
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        SwarmRolePill("3. Creative Design", "Visual Prompts & Copy", Icons.Default.Palette, Color(0xFFA855F7))
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        SwarmRolePill("4. Legal Compliance", "Strict Trademark Filter", Icons.Default.Gavel, ProfitGreen)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Swarm Status Banner
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Forum, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = swarmStatusMessage ?: "Swarm Cluster Online",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Buttons: Run Swarm Loop & Reset Demo Data
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.autoStartSwarmCluster() },
+                            enabled = !isSwarmRunning,
+                            modifier = Modifier.weight(1f).testTag("trigger_swarm_loop_button")
+                        ) {
+                            if (isSwarmRunning) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Collaborating...", fontSize = 12.sp)
+                            } else {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Run Swarm Loop", fontSize = 12.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.clearAllDemoData() },
+                            modifier = Modifier.testTag("clear_demo_data_button")
+                        ) {
+                            Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Clear Demo Data", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
@@ -1304,3 +1519,35 @@ fun BriefingBullet(
         }
     }
 }
+
+@Composable
+fun SwarmRolePill(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accentColor: Color
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(10.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(28.dp).background(accentColor.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+

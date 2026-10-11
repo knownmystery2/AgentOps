@@ -115,6 +115,27 @@ open class MainViewModel(
     val isGeneratingDigitalProduct = MutableStateFlow(false)
     val digitalProductStatusMessage = MutableStateFlow<String?>(null)
 
+    val swarmCluster = com.opensource.autonomous.agent.engine.MultiAgentSwarmCluster(db, repository, secretManager)
+    val isSwarmRunning = MutableStateFlow(false)
+    val swarmStatusMessage = MutableStateFlow<String?>("Multi-Agent Swarm Cluster Online (11 Agents Active)")
+    val activeStoreTheme = MutableStateFlow<String?>("Pop-Up Store Awaiting Directive")
+    val marketingPackages = MutableStateFlow<Map<String, com.opensource.autonomous.agent.engine.SwarmMarketingPackage>>(emptyMap())
+
+    val godInterceptor = com.opensource.autonomous.agent.engine.GodInterceptor(db, repository, secretManager, viewModelScope)
+    val godVerdicts: StateFlow<List<GodAuditVerdictEntity>> = repository.getGodVerdicts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val godHaltedVerdicts: StateFlow<List<GodAuditVerdictEntity>> = repository.getGodHaltedVerdicts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val godTotalIntercepts: StateFlow<Int> = repository.getGodTotalInterceptCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val godHaltedCount: StateFlow<Int> = repository.getGodHaltedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val godLatestVerdict: StateFlow<GodAuditVerdictEntity?> = godInterceptor.latestVerdict
+    val godIsAuditing: StateFlow<Boolean> = godInterceptor.isAuditing
+
+    val adminRunner = com.opensource.autonomous.agent.engine.AdminRunner(db, repository, swarmCluster, godInterceptor, viewModelScope)
+    val adminRunnerState: StateFlow<com.opensource.autonomous.agent.engine.AdminRunnerState> = adminRunner.runnerState
+
     // -----------------------------------------------------------------
     // Network & Polling Reactive States
     // -----------------------------------------------------------------
@@ -143,32 +164,7 @@ open class MainViewModel(
     val selectedMockupColor = MutableStateFlow("Charcoal Slate")
     val selectedMockupPlacement = MutableStateFlow("Chest Center (11\" x 13\")")
     val isGeneratingPod = MutableStateFlow(false)
-    val podQueue = MutableStateFlow<List<PodJobItem>>(
-        listOf(
-            PodJobItem(
-                id = "pod-init-01",
-                sku = "POD-TEE-SLT-2026",
-                product = "Heavyweight T-Shirt",
-                color = "Charcoal Slate",
-                placement = "Chest Center (11\" x 13\")",
-                status = "READY",
-                progressPercent = 100,
-                vectorDpi = 300,
-                timestamp = System.currentTimeMillis() - 7200000
-            ),
-            PodJobItem(
-                id = "pod-init-02",
-                sku = "POD-HOD-NAT-2026",
-                product = "Vintage Hoodie",
-                color = "Natural Canvas",
-                placement = "Back Large (14\" x 16\")",
-                status = "COMPILED",
-                progressPercent = 100,
-                vectorDpi = 300,
-                timestamp = System.currentTimeMillis() - 3600000
-            )
-        )
-    )
+    val podQueue = MutableStateFlow<List<PodJobItem>>(emptyList())
 
     // Module 5: Dropship Supplier Sync State
     val isSyncingSuppliers = MutableStateFlow(false)
@@ -189,6 +185,12 @@ open class MainViewModel(
                 pollLiveBackgroundServer()
                 delay(6000)
             }
+        }
+
+        // Automatic AdminRunner Startup Trigger on Boot with APP_START Payload
+        viewModelScope.launch {
+            delay(1000)
+            adminRunner.onAppStart(autoTriggerCycle = true)
         }
     }
 
@@ -1063,4 +1065,104 @@ open class MainViewModel(
             secretManager.saveStripeSecretKey(key)
         }
     }
+
+    /**
+     * Executes the complete Multi-Agent Swarm Cluster Operational Loop:
+     * Administrator -> Trend & Identity -> Creative Design -> Legal Compliance -> Human Approval
+     */
+    fun autoStartSwarmCluster(customNiche: String? = null) {
+        if (isSwarmRunning.value) return
+        isSwarmRunning.value = true
+        swarmStatusMessage.value = "Swarm Cluster running: Administrator delegating to Trend Agent..."
+        viewModelScope.launch {
+            try {
+                val result = swarmCluster.autoStartAICrashLoop(customNiche)
+                if (result.isSuccess) {
+                    val prods = result.getOrNull() ?: emptyList()
+                    val theme = prods.firstOrNull()?.niche ?: "Trending Pop-Up Store"
+                    activeStoreTheme.value = theme
+                    swarmStatusMessage.value = "Swarm loop complete! ${prods.size} unique products created & trademark verified."
+                } else {
+                    swarmStatusMessage.value = "Swarm note: ${result.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                swarmStatusMessage.value = "Swarm notice: ${e.localizedMessage}"
+            } finally {
+                isSwarmRunning.value = false
+            }
+        }
+    }
+
+    /**
+     * Publishes a digital product to live storefront and generates multi-channel marketing.
+     */
+    fun publishAndMarketProduct(productId: String) {
+        viewModelScope.launch {
+            val result = swarmCluster.publishProductAndLaunchMarketing(productId)
+            if (result.isSuccess) {
+                val pkg = result.getOrNull()
+                if (pkg != null) {
+                    marketingPackages.value = marketingPackages.value + (productId to pkg)
+                }
+            }
+        }
+    }
+
+    /**
+     * Simulates or executes a live customer purchase:
+     * Writes 100% margin ($0 COGS) sale into the double-entry ledger in whole cents.
+     */
+    fun simulateLiveSale(productId: String) {
+        viewModelScope.launch {
+            swarmCluster.processLiveCustomerSale(productId)
+        }
+    }
+
+    /**
+     * Removes all demo/mock data, leaving pristine live function.
+     */
+    fun clearAllDemoData() {
+        viewModelScope.launch {
+            repository.clearAllDemoData()
+            podQueue.value = emptyList()
+            marketingPackages.value = emptyMap()
+            activeStoreTheme.value = "Live Operating Mode"
+            swarmStatusMessage.value = "All demo data removed. 11 Agents Active for live business."
+        }
+    }
+
+    /**
+     * Triggers AdminRunner with 'APP_START' initialization payload.
+     */
+    fun triggerAdminRunnerOnAppStart() {
+        adminRunner.onAppStart(autoTriggerCycle = true)
+    }
+
+    /**
+     * Executes any AdminRunner function calling tool explicitly.
+     */
+    fun executeAdminTool(toolName: String, params: Map<String, String> = emptyMap()) {
+        viewModelScope.launch {
+            adminRunner.executeTool(toolName, params)
+        }
+    }
+
+    /**
+     * Testing / Verification Hook: Triggers God Interceptor to simulate a hazard or sound check
+     */
+    fun simulateGodInterception(hazardType: String) {
+        viewModelScope.launch {
+            godInterceptor.simulateHazard(hazardType)
+        }
+    }
+
+    /**
+     * Clears the God Interceptor audit verdict log.
+     */
+    fun clearGodAuditLog() {
+        viewModelScope.launch {
+            repository.clearGodVerdicts()
+        }
+    }
 }
+

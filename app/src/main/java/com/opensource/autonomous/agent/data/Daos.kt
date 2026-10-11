@@ -16,6 +16,9 @@ interface AgentDao {
 
     @Query("SELECT * FROM agents WHERE id = :id")
     suspend fun getAgentById(id: String): AgentEntity?
+
+    @Query("UPDATE agents SET isActive = :isActive WHERE id = :id")
+    suspend fun updateAgentStatus(id: String, isActive: Boolean)
 }
 
 @Dao
@@ -31,6 +34,9 @@ interface TaskDao {
 
     @Query("UPDATE tasks SET status = :status, result = :result WHERE id = :id")
     suspend fun updateTaskStatus(id: String, status: String, result: String?)
+
+    @Query("DELETE FROM tasks")
+    suspend fun clearTasks()
 }
 
 @Dao
@@ -49,6 +55,9 @@ interface DecisionDao {
 
     @Query("UPDATE decisions SET status = :status WHERE id = :id")
     suspend fun updateDecisionStatus(id: String, status: String)
+
+    @Query("DELETE FROM decisions")
+    suspend fun clearDecisions()
 }
 
 @Dao
@@ -64,6 +73,9 @@ interface LogDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLogs(logs: List<LogEntity>)
+
+    @Query("DELETE FROM logs")
+    suspend fun clearLogs()
 }
 
 @Dao
@@ -76,6 +88,9 @@ interface LedgerDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntries(entries: List<LedgerEntity>)
+
+    @Query("DELETE FROM ledger_entries")
+    suspend fun clearLedger()
 }
 
 @Dao
@@ -88,6 +103,9 @@ interface DropshipDao {
 
     @Query("UPDATE dropship_catalog SET inShortlist = :inShortlist WHERE id = :id")
     suspend fun updateShortlistStatus(id: String, inShortlist: Boolean)
+
+    @Query("DELETE FROM dropship_catalog")
+    suspend fun clearDropship()
 }
 
 @Dao
@@ -100,6 +118,9 @@ interface AccountTaskDao {
 
     @Query("UPDATE account_tasks SET isCompleted = :isCompleted WHERE id = :id")
     suspend fun updateTaskStatus(id: String, isCompleted: Boolean)
+
+    @Query("DELETE FROM account_tasks")
+    suspend fun clearTasks()
 }
 
 @Dao
@@ -151,6 +172,9 @@ interface StorefrontDao {
 
     @Query("SELECT * FROM storefronts WHERE id = :id")
     suspend fun getStorefrontById(id: String): StorefrontEntity?
+
+    @Query("DELETE FROM storefronts")
+    suspend fun clearStorefronts()
 }
 
 @Dao
@@ -166,6 +190,9 @@ interface TrademarkDao {
 
     @Query("SELECT * FROM trademark_checks WHERE id = :id")
     suspend fun getCheckById(id: String): TrademarkCheckEntity?
+
+    @Query("DELETE FROM trademark_checks")
+    suspend fun clearChecks()
 }
 
 @Dao
@@ -191,6 +218,9 @@ interface DigitalProductDao {
     @Query("SELECT * FROM digital_products WHERE status = 'PUBLISHED_LIVE' ORDER BY createdAt DESC")
     fun getPublishedProducts(): Flow<List<DigitalProductEntity>>
 
+    @Query("SELECT * FROM digital_products WHERE status = :status ORDER BY createdAt DESC")
+    fun getProductsByStatus(status: String): Flow<List<DigitalProductEntity>>
+
     @Query("SELECT * FROM digital_products WHERE id = :id LIMIT 1")
     suspend fun getProductById(id: String): DigitalProductEntity?
 
@@ -208,5 +238,35 @@ interface DigitalProductDao {
 
     @Query("UPDATE digital_products SET salesCount = salesCount + 1, totalRevenueCents = totalRevenueCents + priceCents WHERE id = :id")
     suspend fun recordSale(id: String)
+
+    @Query("DELETE FROM digital_products WHERE id = :id")
+    suspend fun deleteProduct(id: String)
+
+    @Query("DELETE FROM digital_products")
+    suspend fun clearProducts()
+}
+
+@Dao
+interface GodAuditDao {
+    @Query("SELECT * FROM god_audit_verdicts ORDER BY timestamp DESC")
+    fun getAllVerdicts(): Flow<List<GodAuditVerdictEntity>>
+
+    @Query("SELECT * FROM god_audit_verdicts WHERE status = 'HALTED' ORDER BY timestamp DESC")
+    fun getHaltedVerdicts(): Flow<List<GodAuditVerdictEntity>>
+
+    @Query("SELECT * FROM god_audit_verdicts ORDER BY timestamp DESC LIMIT 1")
+    fun getLatestVerdict(): Flow<GodAuditVerdictEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVerdict(verdict: GodAuditVerdictEntity)
+
+    @Query("SELECT COUNT(*) FROM god_audit_verdicts")
+    fun getTotalInterceptCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM god_audit_verdicts WHERE status = 'HALTED'")
+    fun getHaltedCount(): Flow<Int>
+
+    @Query("DELETE FROM god_audit_verdicts")
+    suspend fun clearVerdicts()
 }
 

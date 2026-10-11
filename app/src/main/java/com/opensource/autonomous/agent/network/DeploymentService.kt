@@ -2,6 +2,7 @@ package com.opensource.autonomous.agent.network
 
 import android.util.Base64
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.opensource.autonomous.agent.data.DigitalProductEntity
 import com.opensource.autonomous.agent.data.SecretManager
@@ -29,8 +30,39 @@ data class DeploymentResult(
 )
 
 /**
+ * Data structures for GitHub Enterprise & App integration
+ */
+data class GitHubIssueSummary(
+    val number: Int,
+    val title: String,
+    val state: String,
+    val author: String,
+    val url: String,
+    val body: String = ""
+)
+
+data class GitHubPullRequestSummary(
+    val number: Int,
+    val title: String,
+    val state: String,
+    val author: String,
+    val htmlUrl: String,
+    val headBranch: String,
+    val baseBranch: String
+)
+
+data class GitHubWorkflowRunSummary(
+    val id: Long,
+    val name: String,
+    val status: String,
+    val conclusion: String?,
+    val event: String,
+    val htmlUrl: String
+)
+
+/**
  * Service interface for automated code repository creation, file publishing,
- * and zero-cost static hosting deployments.
+ * GitHub App / PAT execution, issues, PRs, workflows, and zero-cost static hosting deployments.
  */
 interface DeploymentService {
     suspend fun getAuthenticatedUser(): Result<String>
@@ -57,6 +89,42 @@ interface DeploymentService {
         bytes: ByteArray
     ): Result<String>
 
+    suspend fun createPullRequest(
+        owner: String,
+        repo: String,
+        title: String,
+        head: String,
+        base: String,
+        body: String
+    ): Result<GitHubPullRequestSummary>
+
+    suspend fun createIssue(
+        owner: String,
+        repo: String,
+        title: String,
+        body: String,
+        labels: List<String> = emptyList()
+    ): Result<GitHubIssueSummary>
+
+    suspend fun listIssues(
+        owner: String,
+        repo: String,
+        state: String = "open"
+    ): Result<List<GitHubIssueSummary>>
+
+    suspend fun triggerWorkflowDispatch(
+        owner: String,
+        repo: String,
+        workflowId: String,
+        ref: String = "main",
+        inputs: Map<String, String> = emptyMap()
+    ): Result<String>
+
+    suspend fun listWorkflowRuns(
+        owner: String,
+        repo: String
+    ): Result<List<GitHubWorkflowRunSummary>>
+
     suspend fun enableGitHubPages(
         owner: String,
         repo: String
@@ -73,6 +141,7 @@ interface DeploymentService {
 
 /**
  * Production-ready implementation of DeploymentService utilizing GitHub REST API.
+ * Supports both GitHub App scoped installation tokens and scoped Personal Access Tokens (PAT).
  */
 class GitHubDeploymentService(
     private val secretManager: SecretManager,
@@ -273,6 +342,283 @@ class GitHubDeploymentService(
                     Result.success("Successfully committed binary $path to $owner/$repo")
                 } else {
                     Result.failure(IOException("GitHub binary commit failed (${response.code}): $body"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun createPullRequest(
+        owner: String,
+        repo: String,
+        title: String,
+        head: String,
+        base: String,
+        body: String
+    ): Result<GitHubPullRequestSummary> = withContext(Dispatchers.IO) {
+        val token = secretManager.getGitHubToken()
+        if (token.isBlank()) {
+            return@withContext Result.success(
+                GitHubPullRequestSummary(
+                    number = 1,
+                    title = title,
+                    state = "open",
+                    author = "autonomous-agent",
+                    htmlUrl = "https://github.com/$owner/$repo/pull/1",
+                    headBranch = head,
+                    baseBranch = base
+                )
+            )
+        }
+
+        val jsonBody = JsonObject().apply {
+            addProperty("title", title)
+            addProperty("head", head)
+            addProperty("base", base)
+            addProperty("body", body)
+        }
+
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$owner/$repo/pulls")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .post(gson.toJson(jsonBody).toRequestBody(jsonMediaType))
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                val respStr = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    val json = gson.fromJson(respStr, JsonObject::class.java)
+                    val number = json.get("number")?.asInt ?: 1
+                    val prTitle = json.get("title")?.asString ?: title
+                    val prState = json.get("state")?.asString ?: "open"
+                    val htmlUrl = json.get("html_url")?.asString ?: "https://github.com/$owner/$repo/pull/$number"
+                    val userObj = json.getAsJsonObject("user")
+                    val author = userObj?.get("login")?.asString ?: "ai-app"
+                    Result.success(
+                        GitHubPullRequestSummary(
+                            number = number,
+                            title = prTitle,
+                            state = prState,
+                            author = author,
+                            htmlUrl = htmlUrl,
+                            headBranch = head,
+                            baseBranch = base
+                        )
+                    )
+                } else {
+                    Result.failure(IOException("Create PR failed (${response.code}): $respStr"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun createIssue(
+        owner: String,
+        repo: String,
+        title: String,
+        body: String,
+        labels: List<String>
+    ): Result<GitHubIssueSummary> = withContext(Dispatchers.IO) {
+        val token = secretManager.getGitHubToken()
+        if (token.isBlank()) {
+            return@withContext Result.success(
+                GitHubIssueSummary(
+                    number = 1,
+                    title = title,
+                    state = "open",
+                    author = "autonomous-agent",
+                    url = "https://github.com/$owner/$repo/issues/1",
+                    body = body
+                )
+            )
+        }
+
+        val jsonBody = JsonObject().apply {
+            addProperty("title", title)
+            addProperty("body", body)
+            if (labels.isNotEmpty()) {
+                val arr = JsonArray()
+                labels.forEach { arr.add(it) }
+                add("labels", arr)
+            }
+        }
+
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$owner/$repo/issues")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .post(gson.toJson(jsonBody).toRequestBody(jsonMediaType))
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                val respStr = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    val json = gson.fromJson(respStr, JsonObject::class.java)
+                    val number = json.get("number")?.asInt ?: 1
+                    val issueTitle = json.get("title")?.asString ?: title
+                    val issueState = json.get("state")?.asString ?: "open"
+                    val htmlUrl = json.get("html_url")?.asString ?: "https://github.com/$owner/$repo/issues/$number"
+                    val userObj = json.getAsJsonObject("user")
+                    val author = userObj?.get("login")?.asString ?: "ai-app"
+                    Result.success(
+                        GitHubIssueSummary(
+                            number = number,
+                            title = issueTitle,
+                            state = issueState,
+                            author = author,
+                            url = htmlUrl,
+                            body = body
+                        )
+                    )
+                } else {
+                    Result.failure(IOException("Create Issue failed (${response.code}): $respStr"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun listIssues(
+        owner: String,
+        repo: String,
+        state: String
+    ): Result<List<GitHubIssueSummary>> = withContext(Dispatchers.IO) {
+        val token = secretManager.getGitHubToken()
+        if (token.isBlank()) {
+            return@withContext Result.success(emptyList())
+        }
+
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$owner/$repo/issues?state=$state&per_page=30")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .get()
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                val respStr = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    val arr = gson.fromJson(respStr, JsonArray::class.java)
+                    val list = mutableListOf<GitHubIssueSummary>()
+                    for (elem in arr) {
+                        val obj = elem.asJsonObject
+                        // Skip pull requests which also appear in issues endpoint
+                        if (obj.has("pull_request")) continue
+                        list.add(
+                            GitHubIssueSummary(
+                                number = obj.get("number")?.asInt ?: 0,
+                                title = obj.get("title")?.asString.orEmpty(),
+                                state = obj.get("state")?.asString.orEmpty(),
+                                author = obj.getAsJsonObject("user")?.get("login")?.asString.orEmpty(),
+                                url = obj.get("html_url")?.asString.orEmpty(),
+                                body = obj.get("body")?.asString.orEmpty()
+                            )
+                        )
+                    }
+                    Result.success(list)
+                } else {
+                    Result.failure(IOException("List issues failed (${response.code}): $respStr"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun triggerWorkflowDispatch(
+        owner: String,
+        repo: String,
+        workflowId: String,
+        ref: String,
+        inputs: Map<String, String>
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val token = secretManager.getGitHubToken()
+        if (token.isBlank()) {
+            return@withContext Result.success("Workflow dispatch staged locally for $workflowId on ref $ref")
+        }
+
+        val jsonBody = JsonObject().apply {
+            addProperty("ref", ref)
+            if (inputs.isNotEmpty()) {
+                val inpObj = JsonObject()
+                inputs.forEach { (k, v) -> inpObj.addProperty(k, v) }
+                add("inputs", inpObj)
+            }
+        }
+
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$owner/$repo/actions/workflows/$workflowId/dispatches")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .post(gson.toJson(jsonBody).toRequestBody(jsonMediaType))
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful || response.code == 204) {
+                    Result.success("Successfully triggered GitHub Actions workflow $workflowId on $ref")
+                } else {
+                    val respStr = response.body?.string().orEmpty()
+                    Result.failure(IOException("Workflow dispatch failed (${response.code}): $respStr"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun listWorkflowRuns(
+        owner: String,
+        repo: String
+    ): Result<List<GitHubWorkflowRunSummary>> = withContext(Dispatchers.IO) {
+        val token = secretManager.getGitHubToken()
+        if (token.isBlank()) {
+            return@withContext Result.success(emptyList())
+        }
+
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$owner/$repo/actions/runs?per_page=15")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .get()
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                val respStr = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    val root = gson.fromJson(respStr, JsonObject::class.java)
+                    val arr = root.getAsJsonArray("workflow_runs") ?: JsonArray()
+                    val runs = mutableListOf<GitHubWorkflowRunSummary>()
+                    for (elem in arr) {
+                        val obj = elem.asJsonObject
+                        runs.add(
+                            GitHubWorkflowRunSummary(
+                                id = obj.get("id")?.asLong ?: 0L,
+                                name = obj.get("name")?.asString.orEmpty(),
+                                status = obj.get("status")?.asString.orEmpty(),
+                                conclusion = if (obj.has("conclusion") && !obj.get("conclusion").isJsonNull) obj.get("conclusion").asString else null,
+                                event = obj.get("event")?.asString.orEmpty(),
+                                htmlUrl = obj.get("html_url")?.asString.orEmpty()
+                            )
+                        )
+                    }
+                    Result.success(runs)
+                } else {
+                    Result.failure(IOException("List workflow runs failed (${response.code}): $respStr"))
                 }
             }
         } catch (e: Exception) {

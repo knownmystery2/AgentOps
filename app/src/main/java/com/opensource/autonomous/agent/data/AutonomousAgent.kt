@@ -33,6 +33,7 @@ enum class AgentStatus(val label: String, val description: String) {
  * High-level business functional departments within the autonomous enterprise.
  */
 enum class BusinessDepartment(val departmentName: String, val code: String) {
+    INTERCEPTOR_GATEWAY("Silent Overseer & Security Interceptor", "GOD"),
     EXECUTIVE("Executive & Strategic Operations", "EXEC"),
     MARKET_INTELLIGENCE("Market Intelligence & Niche Scouting", "INTEL"),
     BRAND_STRATEGY("Brand Identity & Voice Architecture", "BRAND"),
@@ -58,6 +59,20 @@ enum class OperationalRole(
     val requiresHumanApproval: Boolean,
     val defaultPrompt: String
 ) {
+    GOD_OVERSEER(
+        title = "The Interceptor Overseer",
+        department = BusinessDepartment.INTERCEPTOR_GATEWAY,
+        description = "Ultimate, silent, and all-seeing overseer with absolute veto power monitoring outputs before live execution.",
+        coreResponsibilities = listOf(
+            "Passively intercept all code changes, commands, and deployments out-of-band",
+            "Screen for prompt injection, hallucinated loops, and rogue security leaks",
+            "Enforce absolute fail-safe halt and provide remediation fixes",
+            "Guard zero-cost mandate and repository integrity without peer chatter"
+        ),
+        requiresHumanApproval = false,
+        defaultPrompt = AgentPrompts.GOD_OVERSEER_SYSTEM_PROMPT
+    ),
+
     EXECUTIVE_ORCHESTRATOR(
         title = "Executive Router & Goal Decomposition",
         department = BusinessDepartment.EXECUTIVE,
@@ -217,6 +232,7 @@ enum class OperationalRole(
             if (roleStr.isNullOrBlank()) return EXECUTIVE_ORCHESTRATOR
             val normalized = roleStr.uppercase()
             return when {
+                normalized.contains("GOD") || normalized.contains("OVERSEER") || normalized.contains("INTERCEPTOR") -> GOD_OVERSEER
                 normalized.contains("ORCHESTRAT") || normalized.contains("EXECUTIVE") || normalized.contains("ROUTER") || normalized.contains("CEO") -> EXECUTIVE_ORCHESTRATOR
                 normalized.contains("SCOUT") || normalized.contains("RESEARCH") || normalized.contains("TREND") || normalized.contains("NICHE") -> MARKET_RESEARCH_SCOUT
                 normalized.contains("BRAND") || normalized.contains("VOICE") || normalized.contains("IDENTITY") -> BRAND_IDENTITY_ARCHITECT
@@ -260,7 +276,7 @@ data class AutonomousAgent(
     val role: OperationalRole,
     val status: AgentStatus = AgentStatus.ACTIVE,
     val department: BusinessDepartment = role.department,
-    val modelEngine: String = "gemini-1.5-flash",
+    val modelEngine: String = "llama3:8b",
     val systemPrompt: String = role.defaultPrompt,
     val currentTask: String? = null,
     val completedTasksCount: Int = 0,
@@ -354,25 +370,34 @@ data class AutonomousAgent(
         }
 
         /**
-         * The standard 11-agent autonomous business swarm fully configured with roles,
-         * operational statuses, and business responsibilities.
+         * The standard autonomous enterprise swarm with GOD Overseer and specialized agents.
          */
         val DEFAULT_SWARM: List<AutonomousAgent> = listOf(
+            AutonomousAgent(
+                id = "0",
+                name = "GOD",
+                role = OperationalRole.GOD_OVERSEER,
+                status = AgentStatus.ACTIVE,
+                modelEngine = "gemini-2.5-pro (Interceptor)",
+                currentTask = "Silent surveillance: Intercepting live actions before execution",
+                capabilities = listOf("ABSOLUTE_VETO", "PROMPT_INJECTION_SHIELD", "FAIL_SAFE_HALT", "ROGUE_KEY_BLOCK", "ZERO_COST_GUARD")
+            ),
             AutonomousAgent(
                 id = "1",
                 name = "Orchestrator Agent",
                 role = OperationalRole.EXECUTIVE_ORCHESTRATOR,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "llama3:8b",
                 currentTask = "Monitoring swarm task queue & router",
                 capabilities = listOf("TASK_ROUTING", "BRIEFING_GENERATION", "DECISION_ORCHESTRATION")
             ),
+
             AutonomousAgent(
                 id = "2",
                 name = "Trend & Niche Scout",
                 role = OperationalRole.MARKET_RESEARCH_SCOUT,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "llama3:8b",
                 currentTask = "Tracking trending zero-cost niches",
                 capabilities = listOf("MARKET_SCRAPING", "NICHE_SCORING", "COMPETITOR_BENCHMARKING")
             ),
@@ -381,7 +406,7 @@ data class AutonomousAgent(
                 name = "Brand Agent",
                 role = OperationalRole.BRAND_IDENTITY_ARCHITECT,
                 status = AgentStatus.STANDBY,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "llama3:8b",
                 currentTask = "Standby: Awaiting new niche pipeline",
                 capabilities = listOf("BRAND_NAMING", "VOICE_GUIDELINES", "RISK_CONTAINMENT")
             ),
@@ -390,7 +415,7 @@ data class AutonomousAgent(
                 name = "POD Design Agent",
                 role = OperationalRole.PRODUCT_DESIGNER_POD,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "mistral:7b",
                 currentTask = "Generating 300 DPI vector artwork mockups",
                 capabilities = listOf("VECTOR_SYNTHESIS", "MOCKUP_MAPPING", "BLEED_VALIDATION")
             ),
@@ -399,7 +424,7 @@ data class AutonomousAgent(
                 name = "Listing & SEO Agent",
                 role = OperationalRole.CATALOG_SEO_COPYWRITER,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "llama3:8b",
                 currentTask = "Optimizing Etsy/Shopify metadata & 13 SEO tags",
                 capabilities = listOf("SEO_TAG_MINING", "TITLE_COPYWRITING", "BULLET_OPTIMIZATION")
             ),
@@ -408,7 +433,7 @@ data class AutonomousAgent(
                 name = "Dropship Sourcing Agent",
                 role = OperationalRole.SUPPLIER_PROCUREMENT,
                 status = AgentStatus.STANDBY,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "mistral:7b",
                 currentTask = "Standby: Verified supplier catalog synced",
                 capabilities = listOf("SUPPLIER_VETTING", "COGS_CALCULATION", "ZERO_UPFRONT_VALIDATION")
             ),
@@ -417,7 +442,7 @@ data class AutonomousAgent(
                 name = "Marketing Agent",
                 role = OperationalRole.ORGANIC_GROWTH_MARKETER,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "llama3:8b",
                 currentTask = "Producing organic Pinterest pins & TikTok scripts",
                 capabilities = listOf("PIN_CREATION", "REEL_SCRIPTING", "OUTBOUND_EMAIL_FUNNELS")
             ),
@@ -426,7 +451,7 @@ data class AutonomousAgent(
                 name = "Customer Service Agent",
                 role = OperationalRole.CUSTOMER_SUCCESS_CRM,
                 status = AgentStatus.STANDBY,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "mistral:7b",
                 currentTask = "Standby: Listening for customer inquiry webhooks",
                 capabilities = listOf("SUPPORT_TRIAGE", "EMPATHETIC_REPLY", "REFUND_GATEWAY")
             ),
@@ -435,7 +460,7 @@ data class AutonomousAgent(
                 name = "Finance Agent",
                 role = OperationalRole.FINANCIAL_CONTROLLER,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "deepseek-coder:6.7b",
                 currentTask = "Auditing double-entry ledger & whole cent balances",
                 capabilities = listOf("LEDGER_AUDITING", "UNIT_ECONOMICS", "SCHEDULE_C_TAX")
             ),
@@ -444,7 +469,7 @@ data class AutonomousAgent(
                 name = "Compliance Agent",
                 role = OperationalRole.COMPLIANCE_LEGAL_AUDITOR,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "open-source-ip-filter",
                 currentTask = "Screening merchandise against USPTO records",
                 capabilities = listOf("USPTO_TRADEMARK_LOOKUP", "DECEPTIVE_CLAIM_AUDIT", "IP_CLEARANCE")
             ),
@@ -453,7 +478,7 @@ data class AutonomousAgent(
                 name = "Reliability Agent",
                 role = OperationalRole.INFRASTRUCTURE_RELIABILITY,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-1.5-flash",
+                modelEngine = "local-open-weights",
                 currentTask = "Monitoring free-tier quotas & failover pool",
                 capabilities = listOf("QUOTA_MONITORING", "BACKOFF_RETRY", "FAILOVER_ROTATION")
             )
