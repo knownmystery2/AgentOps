@@ -34,6 +34,7 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
     val cronSchedule by viewModel.cronSchedule.collectAsState()
     val workerConcurrency by viewModel.workerConcurrency.collectAsState()
     val memoryThrottleMb by viewModel.memoryThrottleMb.collectAsState()
+    val standbyPoolState by viewModel.standbyPoolState.collectAsState()
     val autonomousAgents by viewModel.autonomousAgents.collectAsState()
     val standbyAgents = autonomousAgents.filter { it.isStandby }
     var inspectingStandbyAgent by remember { mutableStateOf<AutonomousAgent?>(null) }
@@ -210,6 +211,129 @@ fun StandbyPoolScreen(viewModel: MainViewModel) {
                                 onClick = { viewModel.memoryThrottleMb.value = mb },
                                 label = { Text("$mb MB") }
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        // WorkManager Standby Task Pool Manager
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().testTag("workmanager_standby_pool_card")
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "WorkManager Standby Task Pool",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Queue & manage idle agent tasks waiting for optimal conditions",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = ProfitGreen.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "${standbyPoolState.queuedTasksCount} Queued",
+                                color = ProfitGreen,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Condition status badges
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Wifi, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Network Ready", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.BatteryChargingFull, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Battery Optimal", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Memory, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Memory Ready", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Action buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                viewModel.queueStandbyTask(
+                                    agentId = "3",
+                                    title = "Optimal E-Commerce Audit",
+                                    instruction = "Review digital product margins and store listings when network and battery are optimal."
+                                )
+                            },
+                            modifier = Modifier.weight(1.3f).testTag("queue_standby_task_btn")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Queue Idle Task", fontSize = 11.sp)
+                        }
+
+                        FilledTonalButton(
+                            onClick = { viewModel.dispatchStandbyTasks() },
+                            modifier = Modifier.weight(1.2f).testTag("dispatch_standby_tasks_btn")
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Dispatch Now", fontSize = 11.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.clearStandbyPool() },
+                            modifier = Modifier.weight(0.9f).testTag("clear_standby_pool_btn")
+                        ) {
+                            Text("Clear", fontSize = 11.sp)
                         }
                     }
                 }

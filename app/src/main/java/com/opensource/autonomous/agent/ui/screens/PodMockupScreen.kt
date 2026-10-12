@@ -387,6 +387,54 @@ fun PodMockupScreen(
                 }
             }
 
+            // Printify Live Storefront Integration
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().testTag("pod_printify_action_card")
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Printify Shop: kriticallimitz.printify.me", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = ProfitGreen.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "ZERO-COST FULFILLMENT",
+                                color = ProfitGreen,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Automated vector compilation for Shop #26650832. Customer pays at purchase ($0 upfront to founder).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = { viewModel.pushMockupToPrintify(selectedProduct, selectedColor, selectedPlacement) },
+                        modifier = Modifier.fillMaxWidth().testTag("push_to_printify_btn")
+                    ) {
+                        Icon(Icons.Default.Storefront, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Deploy SKU to kriticallimitz.printify.me", fontSize = 13.sp)
+                    }
+                }
+            }
+
             // Live Print-on-Demand Generation Queue
             Text("Live POD Production Queue (${podQueue.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

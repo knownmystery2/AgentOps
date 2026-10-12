@@ -57,6 +57,12 @@ fun DashboardScreen(
     var selectedDepartmentFilter by remember { mutableStateOf("ALL") }
     var showAdvancedSwarmHub by remember { mutableStateOf(false) }
 
+    val activeAlert by viewModel.activeSecurityAlert.collectAsState()
+    val godHaltedCount by viewModel.godHaltedCount.collectAsState()
+    val businessAnalysis by viewModel.businessAnalysis.collectAsState()
+    val isProcessingBusinessPrompt by viewModel.isProcessingBusinessPrompt.collectAsState()
+    val businessOperationStatusMessage by viewModel.businessOperationStatusMessage.collectAsState()
+
     val salesList = ledger.filter { it.category == "SALE" }
     val grossCents = salesList.sumOf { it.amountCents }
     val cogsCents = ledger.filter { it.category == "COGS" }.sumOf { it.amountCents }
@@ -93,6 +99,113 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
+        // Persistent Real-Time God Security Anomaly / System Halt Banner
+        if (activeAlert != null) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("god_security_halt_banner")
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Security,
+                                    contentDescription = "Security Alert",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "🚨 GOD OVERSEER SECURITY HALT",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.dismissSecurityAlert() },
+                                modifier = Modifier.size(28.dp).testTag("dismiss_security_halt_btn")
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss Banner", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "A critical security anomaly or unauthorized rogue action was intercepted and halted by the God Agent before live execution.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "Source: ${activeAlert?.sourceAgent} • Target: ${activeAlert?.targetResource}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Hazard: ${activeAlert?.hazardDetected}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Remediation: ${activeAlert?.remediation}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { viewModel.dismissSecurityAlert() },
+                                modifier = Modifier.testTag("dismiss_halt_btn")
+                            ) {
+                                Text("Dismiss Banner")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = onNavigateToApprovals,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.testTag("view_approval_register_btn")
+                            ) {
+                                Icon(Icons.Default.PendingActions, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Open Approval Register")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Executive Header Card with Real System Date & Live Telemetry
         item {
             Card(
@@ -1204,59 +1317,283 @@ fun DashboardScreen(
         // Autonomous Execution Entry Console
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().testTag("objective_input_card")
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("gemini_business_operations_card")
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Gemini Business Operations Engine",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = BrandEmerald.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "GEMINI 2.5/3.5",
+                                color = BrandEmerald,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Autonomous Directive Dispatch",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Specify an e-commerce expansion directive. The 11-agent team will decompose it into compliant, zero-upfront tasks.",
+                        text = "Process natural language founder inputs into structured business operations and prioritized agent task suggestions.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
                     Spacer(modifier = Modifier.height(10.dp))
+
+                    // Preset Quick Prompt Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "Launch Q4 Vintage Apparel on Printify",
+                            "Viral Organic TikTok & Pinterest Strategy",
+                            "Double-Entry Ledger Fee & Profit Audit",
+                            "USPTO Trademark Clearance for New Brand"
+                        ).forEach { quickPrompt ->
+                            SuggestionChip(
+                                onClick = { businessPrompt = quickPrompt },
+                                label = { Text(quickPrompt, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     OutlinedTextField(
                         value = businessPrompt,
                         onValueChange = { businessPrompt = it },
-                        placeholder = { Text("e.g. Minimalist Retro Coffee POD line on Etsy / CJ Dropshipping desk accessories") },
+                        placeholder = { Text("Enter business idea, scaling directive, or market inquiry...") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("business_objective_input"),
-                        maxLines = 3
+                        maxLines = 4,
+                        supportingText = {
+                            if (businessOperationStatusMessage != null) {
+                                Text(businessOperationStatusMessage!!, color = BrandEmerald, fontSize = 11.sp)
+                            }
+                        }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
                             onClick = {
-                                viewModel.initializeBusiness(businessPrompt)
-                                businessPrompt = ""
+                                if (businessPrompt.isNotBlank()) {
+                                    viewModel.processBusinessPrompt(businessPrompt)
+                                }
                             },
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("initialize_engine_button")
+                            enabled = !isProcessingBusinessPrompt && businessPrompt.isNotBlank(),
+                            modifier = Modifier.weight(1f).testTag("gemini_analyze_button")
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Dispatch Directive")
+                            if (isProcessingBusinessPrompt) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Analyzing...")
+                            } else {
+                                Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Analyze Operations")
+                            }
                         }
 
-                        FilledTonalButton(
-                            onClick = { viewModel.triggerAgentCycle() },
-                            enabled = !isRunningCycle,
-                            modifier = Modifier.testTag("trigger_agent_cycle_button")
+                        if (businessAnalysis != null) {
+                            OutlinedButton(
+                                onClick = { viewModel.clearBusinessAnalysis() },
+                                modifier = Modifier.testTag("clear_analysis_btn")
+                            ) {
+                                Text("Reset")
+                            }
+                        }
+                    }
+
+                    // Display Generated Analysis & Task Suggestions
+                    if (businessAnalysis != null) {
+                        val analysis = businessAnalysis!!
+                        Spacer(modifier = Modifier.height(14.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            if (isRunningCycle) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(Icons.Default.Autorenew, contentDescription = null)
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Executive Strategy Summary",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = ProfitGreen.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = analysis.modelUsed,
+                                            color = ProfitGreen,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = analysis.executiveSummary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text("Niche: ${analysis.nicheFocus}", fontSize = 11.sp) }
+                                    )
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text(analysis.riskAssessment.take(28) + "...", fontSize = 11.sp) }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Generated Task Suggestions (${analysis.taskSuggestions.size})",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        analysis.taskSuggestions.forEach { suggestion ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .testTag("suggestion_card_${suggestion.id.take(6)}")
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = suggestion.title,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = BrandEmerald.copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = "${suggestion.estimatedMarginPercent}% Margin",
+                                                color = BrandEmerald,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Assignee: ${suggestion.assignedAgentRole}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "• Priority: ${suggestion.priority}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (suggestion.priority == "HIGH") Color(0xFFEF4444) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "• $0 COGS",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = ProfitGreen,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = suggestion.detailedInstruction,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.enqueueSuggestedTask(suggestion) },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Enqueue", fontSize = 11.sp)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { viewModel.enqueueSuggestionToStandby(suggestion) },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Standby", fontSize = 11.sp)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { viewModel.sendSuggestionToApprovals(suggestion) },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.PendingActions, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Approval", fontSize = 11.sp)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

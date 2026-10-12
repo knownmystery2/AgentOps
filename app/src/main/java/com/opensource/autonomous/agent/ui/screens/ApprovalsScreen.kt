@@ -1,5 +1,7 @@
 package com.opensource.autonomous.agent.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,8 +22,12 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
 import com.opensource.autonomous.agent.data.DecisionEntity
+import com.opensource.autonomous.agent.data.GodAuditVerdictEntity
 import com.opensource.autonomous.agent.data.OperationalRole
 import com.opensource.autonomous.agent.ui.MainViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ApprovalsScreen(
@@ -32,6 +38,7 @@ fun ApprovalsScreen(
     val isLiveConnected by viewModel.isLiveConnected.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
     val settings by viewModel.settings.collectAsState()
+    val godHaltedVerdicts by viewModel.godHaltedVerdicts.collectAsState()
     var selectedFilter by remember { mutableStateOf("ALL") }
     var feedbackDialogDecision by remember { mutableStateOf<DecisionEntity?>(null) }
 
@@ -48,12 +55,12 @@ fun ApprovalsScreen(
         topBar = {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
-                    text = "Live Approvals Queue",
+                    text = "Live Approvals & Security Register",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Bound to live GET $activeEndpoint/api/decisions. Single-click approve/deny dispatches immediate REST action.",
+                    text = "Review pending e-commerce actions and tasks flagged or halted by the God Agent for manual approval or rejection.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -61,7 +68,9 @@ fun ApprovalsScreen(
 
                 // Filter tabs
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
@@ -69,6 +78,16 @@ fun ApprovalsScreen(
                         onClick = { selectedFilter = "ALL" },
                         label = { Text("All (${decisions.size})") },
                         modifier = Modifier.testTag("filter_all_chip")
+                    )
+                    FilterChip(
+                        selected = selectedFilter == "GOD_FLAGGED",
+                        onClick = { selectedFilter = "GOD_FLAGGED" },
+                        label = { Text("Flagged by God (${godHaltedVerdicts.size})") },
+                        modifier = Modifier.testTag("filter_god_chip"),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
                     )
                     FilterChip(
                         selected = selectedFilter == "POD",
@@ -128,7 +147,55 @@ fun ApprovalsScreen(
             }
         }
     ) { paddingValues ->
-        if (filteredDecisions.isEmpty()) {
+        if (selectedFilter == "GOD_FLAGGED") {
+            if (godHaltedVerdicts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = ProfitGreen,
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No Flagged Tasks in Register",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "The God Agent has not flagged any prompt injections, rogue logic, or hazardous operations.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    items(godHaltedVerdicts, key = { it.id }) { verdict ->
+                        GodApprovalRegisterCard(
+                            verdict = verdict,
+                            onApproveOverride = { viewModel.approveGodHaltedTask(verdict.id) },
+                            onApplyRemediation = { viewModel.approveGodHaltedTask(verdict.id) },
+                            onReject = { viewModel.rejectGodHaltedTask(verdict.id) }
+                        )
+                    }
+                }
+            }
+        } else if (filteredDecisions.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -441,3 +508,107 @@ fun DecisionApprovalCard(
         }
     }
 }
+
+@Composable
+fun GodApprovalRegisterCard(
+    verdict: GodAuditVerdictEntity,
+    onApproveOverride: () -> Unit,
+    onApplyRemediation: () -> Unit,
+    onReject: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth().testTag("god_register_card_${verdict.id}")
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "FLAGGED BY GOD OVERSEER",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                Text(
+                    text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(verdict.timestamp)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Target: ${verdict.targetResource}",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Source Agent: ${verdict.sourceAgent} • Action: ${verdict.actionType}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text(
+                        text = "🚨 Hazard: ${verdict.hazardDetected ?: "Unknown anomaly"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    if (!verdict.remediation.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "💡 Remediation:\n${verdict.remediation}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onApproveOverride,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.weight(1.1f).testTag("approve_override_btn_${verdict.id}")
+                ) {
+                    Text("Approve Override", fontSize = 11.sp)
+                }
+                FilledTonalButton(
+                    onClick = onApplyRemediation,
+                    modifier = Modifier.weight(1f).testTag("apply_remediation_btn_${verdict.id}")
+                ) {
+                    Text("Apply Fix", fontSize = 11.sp)
+                }
+                OutlinedButton(
+                    onClick = onReject,
+                    modifier = Modifier.weight(0.9f).testTag("reject_flagged_btn_${verdict.id}")
+                ) {
+                    Text("Reject", fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+

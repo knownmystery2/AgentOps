@@ -169,6 +169,11 @@ fun LedgerScreen(viewModel: MainViewModel) {
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
+                        text = { Text("Throughput (Recharts)") }
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
                         text = { Text("Schedule C & 1099-K") }
                     )
                 }
@@ -177,6 +182,10 @@ fun LedgerScreen(viewModel: MainViewModel) {
             if (selectedTab == 0) {
                 items(ledger) { entry ->
                     TransactionEntryCard(entry, viewModel)
+                }
+            } else if (selectedTab == 1) {
+                item {
+                    com.opensource.autonomous.agent.ui.components.RechartsThroughputChart(ledger = ledger)
                 }
             } else {
                 item {

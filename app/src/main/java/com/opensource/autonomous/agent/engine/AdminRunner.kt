@@ -521,7 +521,7 @@ CRITICAL OPERATIONAL RULES:
                     }
                 }
                 taskId.contains("MARKETING", ignoreCase = true) -> {
-                    val published = repository.getPublishedProducts().first()
+                    val published = repository.getPublishedDigitalProducts().first()
                     "Marketing batch dispatched for ${published.size} live products across Pinterest, TikTok, and Twitter."
                 }
                 taskId.contains("VERIFY_STREAMS", ignoreCase = true) -> {
@@ -589,7 +589,7 @@ CRITICAL OPERATIONAL RULES:
      */
     private suspend fun checkDataStreamHealth(): String = withContext(Dispatchers.IO) {
         val ledger = repository.getLedgerEntries().first()
-        val logs = repository.getLogs().first()
+        val logs = repository.getAllLogs().first()
 
         val newestTime = maxOf(
             ledger.maxOfOrNull { it.timestamp } ?: 0L,

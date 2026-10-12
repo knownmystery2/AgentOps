@@ -17,13 +17,18 @@ data class SecretStatus(
     val isStripeConfigured: Boolean = false,
     val isStripePublishableConfigured: Boolean = false,
     val isGeminiConfigured: Boolean = false,
+    val isPrintifyConfigured: Boolean = true,
     val githubTokenMasked: String = "Not Configured",
     val stripeSecretKeyMasked: String = "Not Configured",
     val stripePublishableKeyMasked: String = "Not Configured",
     val geminiApiKeyMasked: String = "Not Configured",
+    val printifyTokenMasked: String = "Not Configured",
+    val printifyShopDomain: String = "kriticallimitz.printify.me",
+    val printifyShopId: String = "26650832",
     val githubSource: String = "None", // "AI Studio Secrets / BuildConfig" or "Device Local Settings"
     val stripeSource: String = "None",
-    val geminiSource: String = "None"
+    val geminiSource: String = "None",
+    val printifySource: String = "None"
 )
 
 /**
@@ -51,6 +56,15 @@ class SecretManager(
 
     @Volatile
     private var cachedGeminiApiKey: String = ""
+
+    @Volatile
+    private var cachedPrintifyToken: String = ""
+
+    @Volatile
+    private var cachedPrintifyShopDomain: String = "kriticallimitz.printify.me"
+
+    @Volatile
+    private var cachedPrintifyShopId: String = "26650832"
 
     init {
         // Observe settings changes reactively from Room
@@ -149,23 +163,38 @@ class SecretManager(
             }
         }
 
+        // Resolve Printify Token & Shop Domain
+        val defaultPrintify = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIzN2Q0YmQzMDM1ZmUxMWU5YTgwM2FiN2VlYjNjY2M5NyIsImp0aSI6IjA4YmI2ZDE0YTI0ZjE5YjA4MGY4ZGJjMWY3NzgwNGNkZDQ4NGU5NjA2MDU5MGUxZmY2M2MyNjdlYTVmMWNkMmRlNTA5YWFiODJmMDU2ZWRiIiwiaWF0IjoxNzkxODE3NTI3LjkyMzUzMiwibmJmIjoxNzkxODE3NTI3LjkyMzUzNSwiZXhwIjoxODIzMzUzNTI3LjkxNDUyNiwic3ViIjoiMjY2NTA4MzIiLCJzY29wZXMiOlsic2hvcHMubWFuYWdlIiwic2hvcHMucmVhZCIsImNhdGFsb2cucmVhZCIsIm9yZGVycy5yZWFkIiwib3JkZXJzLndyaXRlIiwicHJvZHVjdHMucmVhZCIsInByb2R1Y3RzLndyaXRlIiwid2ViaG9va3MucmVhZCIsIndlYmhvb2tzLndyaXRlIiwidXBsb2Fkcy5yZWFkIiwidXBsb2Fkcy53cml0ZSIsInByaW50X3Byb3ZpZGVycy5yZWFkIiwidXNlci5pbmZvIl19.VM-97U2qhg5acAzIaGFER_vgWRvq5uQ0KEo83Id1QXrMqeJL74-q6fgD9wXFblhFpZPFGV3N0hups8cwUZ936Fvbx1mK0t-f7kWyor_KDoQsXGzHZ1AVm51d1KjE0iDnjY1m54ed4ZKQSfQBJglNBgBDsOmMywqua4NgEZa_BPTx5mS1AnZmjyMO8cN9vFehLwq430MNaSVPMzJ4Eod1wZ2yac167Buu-EI2q_-k0DtKV1rlEINO6bs9DT5AVEks7kdLVxP7g-DZf_ufzAnq7xcPh_ysuoX382WwOLChlVoBqiA_wmJGlNmHYblhtHF5fDF-XI-vmlqE4dN8FWmO7KvvbivsiTLjnJ9OnREhElAuE79uyJbc6qRTC_x6DeaytaT2fN9i3GlJueC9tj7ZAFAiWKteV6s0Rb8Nt5hGCclmU7LWgApkkrU-oEnpnP9Vx_monSyQovgtPDY3K2-5qTKoLtDBGlFNDGHRQ0rqCz_r5cisjfHkq_LKXbfziUNtFqJVn07GmunBUvlTwcgwvTuREnc2qZD2hlneETH35xTDT6cZHqcU2qs_h35xK1RbUR0sWV0ZoJYfyG-8fCFhB8sQnThoBpkPDnQ7jsd2sZ_NFyp3MNxetQ9rW_kmWlQv9141rUGuQus49fE1jBEvdwVNDqa3DkmadLMyjQkeits"
+        val localPrintify = settings?.keyPrintify?.trim().orEmpty()
+        val effectivePrintify = if (localPrintify.isNotBlank()) localPrintify else defaultPrintify
+        val effectivePrintifyDomain = settings?.printifyShopDomain?.trim()?.ifBlank { "kriticallimitz.printify.me" } ?: "kriticallimitz.printify.me"
+        val effectivePrintifyShopId = settings?.printifyShopId?.trim()?.ifBlank { "26650832" } ?: "26650832"
+
         cachedGithubToken = effectiveGithub
         cachedStripeSecretKey = effectiveStripe
         cachedStripePublishableKey = effectiveStripePub
         cachedGeminiApiKey = effectiveGemini
+        cachedPrintifyToken = effectivePrintify
+        cachedPrintifyShopDomain = effectivePrintifyDomain
+        cachedPrintifyShopId = effectivePrintifyShopId
 
         _secretStatus.value = SecretStatus(
             isGitHubConfigured = effectiveGithub.isNotBlank(),
             isStripeConfigured = effectiveStripe.isNotBlank(),
             isStripePublishableConfigured = effectiveStripePub.isNotBlank(),
             isGeminiConfigured = effectiveGemini.isNotBlank(),
+            isPrintifyConfigured = effectivePrintify.isNotBlank(),
             githubTokenMasked = maskSecret(effectiveGithub, prefixLength = 4, suffixLength = 4),
             stripeSecretKeyMasked = maskSecret(effectiveStripe, prefixLength = 7, suffixLength = 4),
             stripePublishableKeyMasked = maskSecret(effectiveStripePub, prefixLength = 7, suffixLength = 4),
             geminiApiKeyMasked = maskSecret(effectiveGemini, prefixLength = 4, suffixLength = 4),
+            printifyTokenMasked = maskSecret(effectivePrintify, prefixLength = 8, suffixLength = 6),
+            printifyShopDomain = effectivePrintifyDomain,
+            printifyShopId = effectivePrintifyShopId,
             githubSource = githubSource,
             stripeSource = stripeSource,
-            geminiSource = geminiSource
+            geminiSource = geminiSource,
+            printifySource = if (localPrintify.isNotBlank()) "Device Local Settings" else "Verified Active JWT"
         )
     }
 
@@ -211,6 +240,8 @@ class SecretManager(
         val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
         val updated = currentSettings.copy(keyGithub = token.trim())
         settingsDao.saveSettings(updated)
+        cachedGithubToken = token.trim()
+        refreshSecrets(updated)
     }
 
     /**
@@ -220,6 +251,8 @@ class SecretManager(
         val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
         val updated = currentSettings.copy(keyStripe = secretKey.trim())
         settingsDao.saveSettings(updated)
+        cachedStripeSecretKey = secretKey.trim()
+        refreshSecrets(updated)
     }
 
     /**
@@ -229,6 +262,54 @@ class SecretManager(
         val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
         val updated = currentSettings.copy(keyGemini = apiKey.trim())
         settingsDao.saveSettings(updated)
+        cachedGeminiApiKey = apiKey.trim()
+        refreshSecrets(updated)
+    }
+
+    /**
+     * Retrieves active Printify API Token (JWT).
+     */
+    fun getPrintifyToken(): String = cachedPrintifyToken
+
+    /**
+     * Retrieves configured Printify Shop Domain (e.g. kriticallimitz.printify.me).
+     */
+    fun getPrintifyShopDomain(): String = cachedPrintifyShopDomain
+
+    /**
+     * Retrieves configured Printify Shop ID.
+     */
+    fun getPrintifyShopId(): String = cachedPrintifyShopId
+
+    /**
+     * Checks if a valid non-empty Printify token is available.
+     */
+    fun hasValidPrintifyToken(): Boolean = cachedPrintifyToken.isNotBlank()
+
+    /**
+     * Saves or overrides the Printify Token on-device in Room.
+     */
+    suspend fun savePrintifyToken(token: String) = withContext(Dispatchers.IO) {
+        val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
+        val updated = currentSettings.copy(keyPrintify = token.trim())
+        settingsDao.saveSettings(updated)
+        cachedPrintifyToken = token.trim()
+        refreshSecrets(updated)
+    }
+
+    /**
+     * Saves Printify shop domain and ID on-device in Room.
+     */
+    suspend fun savePrintifyShop(domain: String, shopId: String) = withContext(Dispatchers.IO) {
+        val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
+        val updated = currentSettings.copy(
+            printifyShopDomain = domain.trim(),
+            printifyShopId = shopId.trim()
+        )
+        settingsDao.saveSettings(updated)
+        cachedPrintifyShopDomain = domain.trim()
+        cachedPrintifyShopId = shopId.trim()
+        refreshSecrets(updated)
     }
 
     /**

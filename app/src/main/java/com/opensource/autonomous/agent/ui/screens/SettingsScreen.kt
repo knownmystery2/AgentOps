@@ -53,6 +53,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val pingLatency by viewModel.pingLatencyMs.collectAsState()
     val isTestingPing by viewModel.isTestingPing.collectAsState()
     val secretStatus by viewModel.secretStatus.collectAsState()
+    val dbMaintenanceState by viewModel.databaseMaintenanceState.collectAsState()
+    val printifyConnectionStatus by viewModel.printifyConnectionStatus.collectAsState()
+    val isTestingPrintify by viewModel.isTestingPrintify.collectAsState()
 
     var selectedCategory by remember { mutableStateOf(SettingsCategory.ALL) }
     var showResetDialog by remember { mutableStateOf(false) }
@@ -130,6 +133,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var keyHuggingFace by remember(currentSettings) { mutableStateOf(currentSettings?.keyHuggingFace ?: "") }
     var keyOpenRouter by remember(currentSettings) { mutableStateOf(currentSettings?.keyOpenRouter ?: "") }
     var keyGemini by remember(currentSettings) { mutableStateOf(currentSettings?.keyGemini ?: "") }
+    var keyPrintify by remember(currentSettings) { mutableStateOf(currentSettings?.keyPrintify ?: "") }
+    var printifyShopDomain by remember(currentSettings) { mutableStateOf(currentSettings?.printifyShopDomain ?: "kriticallimitz.printify.me") }
+    var printifyShopId by remember(currentSettings) { mutableStateOf(currentSettings?.printifyShopId ?: "26650832") }
 
     var showGithubKey by remember { mutableStateOf(false) }
     var showStripeKey by remember { mutableStateOf(false) }
@@ -138,6 +144,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showHfKey by remember { mutableStateOf(false) }
     var showOrKey by remember { mutableStateOf(false) }
     var showGeminiKey by remember { mutableStateOf(false) }
+    var showPrintifyKey by remember { mutableStateOf(false) }
 
     // 7. Notifications State
     var pushNotificationsActive by remember(currentSettings) { mutableStateOf(currentSettings?.pushNotificationsActive ?: true) }
@@ -204,6 +211,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
             keyHuggingFace = keyHuggingFace,
             keyOpenRouter = keyOpenRouter,
             keyGemini = keyGemini,
+            keyPrintify = keyPrintify,
+            printifyShopDomain = printifyShopDomain,
+            printifyShopId = printifyShopId,
             pushNotificationsActive = pushNotificationsActive,
             notificationLevel = notificationLevel,
             notifyPitches = notifyPitches,
@@ -909,12 +919,91 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         Text("Print-On-Demand / Dropship Fulfillment Mode", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("Direct JAMStack Mock", "Printify Sandbox", "Printful API").forEach { pod ->
+                            listOf("Direct JAMStack Mock", "Printify Live (kriticallimitz.printify.me)", "Printful API").forEach { pod ->
                                 FilterChip(
                                     selected = podProviderSandbox == pod,
                                     onClick = { podProviderSandbox = pod; commitSettings() },
                                     label = { Text(pod, fontSize = 11.sp) }
                                 )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider()
+
+                    // Printify Storefront Live Connection Card
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("printify_settings_card")
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Storefront, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Printify Storefront (Live)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = ProfitGreen.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "JWT ACTIVE",
+                                        color = ProfitGreen,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = printifyConnectionStatus ?: "Connected: $printifyShopDomain",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedTextField(
+                                value = printifyShopDomain,
+                                onValueChange = {
+                                    printifyShopDomain = it
+                                    commitSettings()
+                                    viewModel.updatePrintifyShop(it, printifyShopId)
+                                },
+                                label = { Text("Printify Shop Domain") },
+                                modifier = Modifier.fillMaxWidth().testTag("setting_printify_domain")
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = printifyShopId,
+                                onValueChange = {
+                                    printifyShopId = it
+                                    commitSettings()
+                                    viewModel.updatePrintifyShop(printifyShopDomain, it)
+                                },
+                                label = { Text("Printify Shop ID") },
+                                modifier = Modifier.fillMaxWidth().testTag("setting_printify_shop_id")
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { viewModel.testPrintifyConnection() },
+                                    enabled = !isTestingPrintify,
+                                    modifier = Modifier.weight(1f).testTag("test_printify_btn")
+                                ) {
+                                    if (isTestingPrintify) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    } else {
+                                        Icon(Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Test Connection", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -1076,6 +1165,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         isVisible = showGeminiKey,
                         onValueChange = { keyGemini = it; commitSettings() },
                         onToggleVisibility = { showGeminiKey = !showGeminiKey }
+                    )
+
+                    SecureKeyField(
+                        label = "Printify API Bearer Token (JWT / kriticallimitz)",
+                        value = keyPrintify,
+                        isVisible = showPrintifyKey,
+                        onValueChange = { keyPrintify = it; commitSettings(); viewModel.updatePrintifyToken(it) },
+                        onToggleVisibility = { showPrintifyKey = !showPrintifyKey }
                     )
 
                     SecureKeyField(
@@ -1270,6 +1367,107 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         onCheckedChange = { autoBackupEnabled = it; commitSettings() },
                         testTag = "setting_auto_backup"
                     )
+
+                    HorizontalDivider()
+
+                    Text("Room Database Maintenance & Integrity", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = "Periodic SQLite integrity validation and VACUUM defragmentation to prevent data corruption and reclaim free storage.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Database telemetry chips
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text("Storage Size", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${dbMaintenanceState.databaseSizeKb} KB", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text("Integrity Status", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = if (dbMaintenanceState.isIntegrityValid) "Healthy" else "Warning",
+                                    color = if (dbMaintenanceState.isIntegrityValid) ProfitGreen else MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text("Last Reclaimed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${dbMaintenanceState.bytesSavedOnLastVacuum} B", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+
+                    // Report snippet
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = dbMaintenanceState.lastIntegrityReport,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+
+                    // Action buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = { viewModel.runDatabaseIntegrityCheck() },
+                            modifier = Modifier.weight(1f).testTag("run_integrity_check_btn")
+                        ) {
+                            Icon(Icons.Default.VerifiedUser, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Integrity Check", fontSize = 11.sp)
+                        }
+
+                        FilledTonalButton(
+                            onClick = { viewModel.runDatabaseVacuum() },
+                            modifier = Modifier.weight(1f).testTag("run_vacuum_btn")
+                        ) {
+                            Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("VACUUM", fontSize = 11.sp)
+                        }
+
+                        Button(
+                            onClick = { viewModel.runFullDatabaseMaintenance() },
+                            enabled = !dbMaintenanceState.isRunning,
+                            modifier = Modifier.weight(1f).testTag("run_full_maintenance_btn")
+                        ) {
+                            if (dbMaintenanceState.isRunning) {
+                                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text("Full Cycle", fontSize = 11.sp)
+                            }
+                        }
+                    }
 
                     HorizontalDivider()
 

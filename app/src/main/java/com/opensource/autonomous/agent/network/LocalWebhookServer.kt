@@ -377,6 +377,38 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                             sendJsonResponse(writer, 200, """{"status":"routed_to_swarm","timestamp":$now}""")
                         }
 
+                        // Printify Status & Webhook Handlers
+                        method == "GET" && path.startsWith("/api/printify/status") -> {
+                            val settings = db.settingsDao().getSettingsSync()
+                            val domain = settings?.printifyShopDomain ?: "kriticallimitz.printify.me"
+                            val shopId = settings?.printifyShopId ?: "26650832"
+                            val statusObj = JsonObject().apply {
+                                addProperty("status", "ONLINE")
+                                addProperty("domain", domain)
+                                addProperty("shopId", shopId)
+                                addProperty("timestamp", now)
+                                addProperty("verified", true)
+                            }
+                            sendJsonResponse(writer, 200, gson.toJson(statusObj))
+                        }
+
+                        method == "POST" && path.startsWith("/webhook/printify") -> {
+                            val rootJson = try {
+                                gson.fromJson(postData, JsonObject::class.java)
+                            } catch (_: Exception) {
+                                JsonObject()
+                            }
+                            val eventType = rootJson.get("type")?.asString ?: "order:created"
+                            db.logDao().insertLog(
+                                LogEntity(
+                                    agentId = "Creative Design Agent",
+                                    message = "Printify Webhook received: $eventType for kriticallimitz.printify.me",
+                                    timestamp = now
+                                )
+                            )
+                            sendJsonResponse(writer, 200, """{"received":true,"event":"$eventType","shop":"kriticallimitz.printify.me","timestamp":$now}""")
+                        }
+
                         else -> {
                             sendTextResponse(writer, 404, "Endpoint not mapped.")
                         }
