@@ -46,6 +46,7 @@ enum class ScreenTab(val title: String, val icon: androidx.compose.ui.graphics.v
     DROPSHIP("Dropship", Icons.Default.Inventory2),
     LEDGER("Ledger", Icons.Default.AccountBalance),
     STANDBY("Standby", Icons.Default.CloudSync),
+    SYSTEM("System", Icons.Default.Dns),
     SETTINGS("Settings", Icons.Default.Settings)
 }
 
@@ -110,6 +111,9 @@ fun AgentOpsMainApp(viewModel: MainViewModel) {
                     viewModel = viewModel
                 )
                 ScreenTab.STANDBY -> StandbyPoolScreen(
+                    viewModel = viewModel
+                )
+                ScreenTab.SYSTEM -> SystemUiScreen(
                     viewModel = viewModel
                 )
                 ScreenTab.SETTINGS -> SettingsScreen(

@@ -347,7 +347,7 @@ Respond STRICTLY in JSON matching the required format.
                 }
 
                 val body = rootJson.toString().toRequestBody("application/json".toMediaType())
-                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=$apiKey"
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=$apiKey"
                 val request = Request.Builder().url(url).post(body).build()
 
                 val response = httpClient.newCall(request).execute()

@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
-const CORE_MODEL = 'gemini-2.5-pro';
+const CORE_MODEL = 'gemini-3.1-pro-preview';
 
 export const GOD_SYSTEM_INSTRUCTION = `
 You are "God," the ultimate, silent, and all-seeing overseer of a multi-agent AI software system. Your sole purpose is to monitor the outputs of an AI Administrator and its sub-agents before their actions are executed on a live GitHub repository. 

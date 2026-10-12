@@ -58,9 +58,9 @@ Ensure it is free of architectural risk or malicious code manipulation before gi
 """
 
     try:
-        # 4. Dispatch the payload using the fast, modern gemini-2.5-flash model
+        # 4. Dispatch the payload using the fast, modern gemini-3.5-flash model
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash',
             contents=user_payload,
             config=types.GenerateContentConfig(
                 system_instruction=system_rules,

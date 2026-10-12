@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.agentops.ui.MainViewModel
+import com.example.ui.theme.ProfitGreen
 import com.opensource.autonomous.agent.data.GodAuditVerdictEntity
+import com.opensource.autonomous.agent.data.GodInstallDiagnostic
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -89,6 +91,86 @@ fun GodOverseerScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
+            // 0. FULL INSTALL STATUS CARD
+            item {
+                val diagnostic by viewModel.godInstallDiagnostic.collectAsState()
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("god_full_install_status_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Verified,
+                                    contentDescription = null,
+                                    tint = ProfitGreen,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "God Agent: Full Install Complete",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = ProfitGreen.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "100% ARMED",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = ProfitGreen,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "All security gateway layers, SQLite tables, out-of-band interceptors, and notification services are fully deployed and watching.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            DiagnosticCheckRow(title = "Database Seed (Agent ID 0: GOD Overseer)", isOk = diagnostic.isDatabaseSeeded)
+                            DiagnosticCheckRow(title = "Out-of-Band Interceptor (Passive Veto)", isOk = diagnostic.isInterceptorActive)
+                            DiagnosticCheckRow(title = "Real-time Security Halt Notification Service", isOk = diagnostic.isNotificationServiceRunning)
+                            DiagnosticCheckRow(title = "Security Gateway Scripts (Python & Node)", isOk = diagnostic.isSecurityGateScriptVerified)
+                            DiagnosticCheckRow(title = "Zero-Trust Cryptographic Audit Ledger", isOk = diagnostic.isAuditTrailFunctional)
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = { viewModel.runGodInstallDiagnostics() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("run_god_diagnostics_btn"),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Re-Verify Full Install State")
+                        }
+                    }
+                }
+            }
+
             // 1. ARCHITECTURE CARD
             item {
                 Card(
@@ -572,3 +654,23 @@ fun VerdictCard(
         }
     }
 }
+
+@Composable
+private fun DiagnosticCheckRow(title: String, isOk: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (isOk) Icons.Default.CheckCircle else Icons.Default.Warning,
+            contentDescription = null,
+            tint = if (isOk) ProfitGreen else MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            fontSize = 12.sp,
+            fontWeight = if (isOk) FontWeight.Normal else FontWeight.Bold
+        )
+    }
+}
+

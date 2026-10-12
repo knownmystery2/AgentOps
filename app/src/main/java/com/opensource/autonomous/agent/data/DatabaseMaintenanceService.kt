@@ -161,6 +161,10 @@ class DatabaseMaintenanceService(
         }
     }
 
+    fun triggerFullOptimization() {
+        runFullMaintenance()
+    }
+
     private fun logMessage(msg: String) {
         val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val entry = "[$time] $msg"
