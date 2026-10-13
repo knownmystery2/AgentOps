@@ -227,7 +227,7 @@ class MultiAgentOrchestrator(
         )
 
         val deployment = deploymentOutcome.getOrNull()
-        val mockRepoUrl = deployment?.repoUrl ?: "https://github.com/autonomous-ops/$repoSlug"
+        val storefrontRepoUrl = deployment?.repoUrl ?: "https://github.com/autonomous-ops/$repoSlug"
         val setupLogs = StringBuilder()
         setupLogs.append("1. Multi-Agent Team assembled: Orchestrator, Research Scout, Content Producer, Compliance.\n")
         setupLogs.append("2. Trademark & Copyright Pre-Audit: Cleared (Cert: ${tmCheck.clearanceHash}).\n")
@@ -243,7 +243,7 @@ class MultiAgentOrchestrator(
             platformType = "GitHub Pages + Stripe",
             status = "PENDING_APPROVAL",
             repoName = repoSlug,
-            repoUrl = mockRepoUrl,
+            repoUrl = storefrontRepoUrl,
             stripePaymentLink = stripeLink,
             monthlyRevenueCents = 0L,
             monthlyCostCents = 0L,
@@ -260,7 +260,7 @@ class MultiAgentOrchestrator(
             id = UUID.randomUUID().toString(),
             agentSource = "Autonomous Storefront Engine",
             description = "Authorize Live Public Launch: '$companyName' [$0 Upfront Cost, Trademark Cleared]",
-            payloadJson = """{"type":"STOREFRONT","storeId":"$storeId","company":"$companyName","niche":"$businessNiche","cost":0,"repo":"$mockRepoUrl","stripe":"$stripeLink","compliance":"${tmCheck.clearanceHash}"}""",
+            payloadJson = """{"type":"STOREFRONT","storeId":"$storeId","company":"$companyName","niche":"$businessNiche","cost":0,"repo":"$storefrontRepoUrl","stripe":"$stripeLink","compliance":"${tmCheck.clearanceHash}"}""",
             status = "PENDING",
             timestamp = System.currentTimeMillis()
         )

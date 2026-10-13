@@ -807,11 +807,11 @@ fun DashboardScreen(
 
                         OutlinedButton(
                             onClick = { viewModel.clearAllDemoData() },
-                            modifier = Modifier.testTag("clear_demo_data_button")
+                            modifier = Modifier.testTag("purge_workspace_button")
                         ) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Clear Demo Data", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                            Text("Purge Workspace Cache", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

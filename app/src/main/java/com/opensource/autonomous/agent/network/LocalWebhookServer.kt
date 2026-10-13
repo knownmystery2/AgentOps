@@ -28,6 +28,7 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
     companion object {
         @Volatile
         var latestPodWorkspacePayload: String = "{}"
+        val livePodOrders = java.util.concurrent.CopyOnWriteArrayList<JsonObject>()
     }
     private val scope = CoroutineScope(Dispatchers.IO)
     private val gson = Gson()
@@ -151,27 +152,14 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                                     swarmArray.add(obj)
                                 }
                             } else {
-                                val defaultRoles = listOf(
-                                    Triple("1", "Orchestrator Agent", "Executive Router"),
-                                    Triple("2", "Trend & Niche Scout", "Market Research"),
-                                    Triple("3", "Brand Agent", "Identity & Voice"),
-                                    Triple("4", "POD Design Agent", "Mockup & Print"),
-                                    Triple("5", "Listing & SEO Agent", "Copywriter"),
-                                    Triple("6", "Dropship Sourcing Agent", "Procurement"),
-                                    Triple("7", "Marketing Agent", "Organic Growth"),
-                                    Triple("8", "Customer Service Agent", "Support & Inquiries"),
-                                    Triple("9", "Finance Agent", "Ledger & Compliance"),
-                                    Triple("10", "Compliance Agent", "Trademark & Risk"),
-                                    Triple("11", "Reliability Agent", "Failover & Health")
-                                )
-                                defaultRoles.forEachIndexed { idx, (id, name, role) ->
+                                com.opensource.autonomous.agent.data.AutonomousAgent.DEFAULT_SWARM.forEach { agent ->
                                     val obj = JsonObject().apply {
-                                        addProperty("id", id)
-                                        addProperty("name", name)
-                                        addProperty("role", role)
-                                        addProperty("status", if (idx < 2) "ACTIVE" else "STANDBY")
-                                        addProperty("model", "llama3")
-                                        addProperty("currentTask", if (idx == 0) "Supervising multi-agent execution pipeline" else "Standing by for task queue events")
+                                        addProperty("id", agent.id)
+                                        addProperty("name", agent.name)
+                                        addProperty("role", agent.role.title)
+                                        addProperty("status", agent.status.name)
+                                        addProperty("model", "gemini-2.5-pro")
+                                        addProperty("currentTask", agent.currentTask)
                                         addProperty("lastPingTimestamp", now)
                                         addProperty("latencyMs", 14)
                                     }
@@ -226,54 +214,10 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                         }
 
 
-                        // 8. POD Queue & Active Orders GET
+                        // 8. POD Queue & Active Orders GET (Factual Live Queue)
                         method == "GET" && (path.startsWith("/api/pod/queue") || path.startsWith("/api/pod/orders")) -> {
-                            val array = JsonArray().apply {
-                                add(JsonObject().apply {
-                                    addProperty("id", "ORD-8821")
-                                    addProperty("sku", "POD-HET-FG-2026")
-                                    addProperty("product", "Heavyweight T-Shirt (240 GSM)")
-                                    addProperty("color", "Forest Green")
-                                    addProperty("placement", "Chest Center (11\" x 13\")")
-                                    addProperty("status", "PRINTING")
-                                    addProperty("progressPercent", 68)
-                                    addProperty("vectorDpi", 300)
-                                    addProperty("timestamp", now - 1800000)
-                                })
-                                add(JsonObject().apply {
-                                    addProperty("id", "ORD-8820")
-                                    addProperty("sku", "POD-HOD-TC-2026")
-                                    addProperty("product", "Vintage Hoodie (380 GSM)")
-                                    addProperty("color", "Terracotta")
-                                    addProperty("placement", "Chest Center (11\" x 13\")")
-                                    addProperty("status", "READY")
-                                    addProperty("progressPercent", 100)
-                                    addProperty("vectorDpi", 300)
-                                    addProperty("timestamp", now - 7200000)
-                                })
-                                add(JsonObject().apply {
-                                    addProperty("id", "ORD-8819")
-                                    addProperty("sku", "POD-MUG-DT-2026")
-                                    addProperty("product", "Ceramic Mug (11 oz)")
-                                    addProperty("color", "Dark Teal")
-                                    addProperty("placement", "Full Wrap Print")
-                                    addProperty("status", "QUEUED")
-                                    addProperty("progressPercent", 25)
-                                    addProperty("vectorDpi", 300)
-                                    addProperty("timestamp", now - 600000)
-                                })
-                                add(JsonObject().apply {
-                                    addProperty("id", "ORD-8818")
-                                    addProperty("sku", "POD-TOT-CW-2026")
-                                    addProperty("product", "Canvas Tote Bag (Bull Denim)")
-                                    addProperty("color", "Classic White")
-                                    addProperty("placement", "Center Graphic")
-                                    addProperty("status", "READY")
-                                    addProperty("progressPercent", 100)
-                                    addProperty("vectorDpi", 300)
-                                    addProperty("timestamp", now - 14400000)
-                                })
-                            }
+                            val array = JsonArray()
+                            livePodOrders.forEach { array.add(it) }
                             sendJsonResponse(writer, 200, gson.toJson(array))
                         }
 
@@ -326,6 +270,7 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                                 addProperty("orderStatus", "PRINTING")
                                 addProperty("timestamp", now)
                             }
+                            livePodOrders.add(0, res)
                             sendJsonResponse(writer, 200, gson.toJson(res))
                         }
 

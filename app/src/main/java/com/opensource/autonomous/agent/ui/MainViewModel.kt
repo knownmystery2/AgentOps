@@ -220,54 +220,7 @@ open class MainViewModel(
     val selectedMockupColor = MutableStateFlow("Charcoal Slate")
     val selectedMockupPlacement = MutableStateFlow("Chest Center (11\" x 13\")")
     val isGeneratingPod = MutableStateFlow(false)
-    val podQueue = MutableStateFlow<List<PodJobItem>>(
-        listOf(
-            PodJobItem(
-                id = "ORD-8821",
-                sku = "POD-HET-FG-2026",
-                product = "Heavyweight T-Shirt (240 GSM)",
-                color = "Forest Green",
-                placement = "Chest Center (11\" x 13\")",
-                status = "PRINTING",
-                progressPercent = 68,
-                vectorDpi = 300,
-                timestamp = System.currentTimeMillis() - 1800000
-            ),
-            PodJobItem(
-                id = "ORD-8820",
-                sku = "POD-HOD-TC-2026",
-                product = "Vintage Hoodie (380 GSM)",
-                color = "Terracotta",
-                placement = "Chest Center (11\" x 13\")",
-                status = "READY",
-                progressPercent = 100,
-                vectorDpi = 300,
-                timestamp = System.currentTimeMillis() - 7200000
-            ),
-            PodJobItem(
-                id = "ORD-8819",
-                sku = "POD-MUG-DT-2026",
-                product = "Ceramic Mug (11 oz)",
-                color = "Dark Teal",
-                placement = "Full Wrap Print",
-                status = "QUEUED",
-                progressPercent = 25,
-                vectorDpi = 300,
-                timestamp = System.currentTimeMillis() - 600000
-            ),
-            PodJobItem(
-                id = "ORD-8818",
-                sku = "POD-TOT-CW-2026",
-                product = "Canvas Tote Bag (Bull Denim)",
-                color = "Classic White",
-                placement = "Center Graphic",
-                status = "READY",
-                progressPercent = 100,
-                vectorDpi = 300,
-                timestamp = System.currentTimeMillis() - 14400000
-            )
-        )
-    )
+    val podQueue = MutableStateFlow<List<PodJobItem>>(emptyList())
 
     // Printify Live Integration States
     val printifyConnectionStatus = MutableStateFlow<String?>("Connected: kriticallimitz.printify.me (Shop ID: 26650832)")
@@ -688,6 +641,21 @@ open class MainViewModel(
                 timestamp = now
             )
             podQueue.value = listOf(newOrder) + podQueue.value
+
+            val orderJson = com.google.gson.JsonObject().apply {
+                addProperty("id", orderId)
+                addProperty("orderId", orderId)
+                addProperty("sku", sku)
+                addProperty("product", productName)
+                addProperty("color", color)
+                addProperty("placement", placement)
+                addProperty("grossCents", grossPriceCents)
+                addProperty("vectorDpi", 300)
+                addProperty("status", "PRINTING")
+                addProperty("progressPercent", 15)
+                addProperty("timestamp", now)
+            }
+            com.opensource.autonomous.agent.network.LocalWebhookServer.livePodOrders.add(0, orderJson)
 
             recordManualSale(
                 store = "Print Defy Pop-Up",
@@ -1240,9 +1208,10 @@ open class MainViewModel(
         viewModelScope.launch {
             repository.clearAllDemoData()
             podQueue.value = emptyList()
+            com.opensource.autonomous.agent.network.LocalWebhookServer.livePodOrders.clear()
             marketingPackages.value = emptyMap()
             activeStoreTheme.value = "Live Operating Mode"
-            swarmStatusMessage.value = "All demo data removed. 11 Agents Active for live business."
+            swarmStatusMessage.value = "Workspace purged. 11 Agents Active for live business."
         }
     }
 
