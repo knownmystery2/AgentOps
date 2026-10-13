@@ -226,22 +226,107 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                         }
 
 
-                        // 8. POD Queue GET & Generate POST
-                        method == "GET" && path.startsWith("/api/pod/queue") -> {
+                        // 8. POD Queue & Active Orders GET
+                        method == "GET" && (path.startsWith("/api/pod/queue") || path.startsWith("/api/pod/orders")) -> {
                             val array = JsonArray().apply {
                                 add(JsonObject().apply {
-                                    addProperty("id", "pod-job-1")
-                                    addProperty("sku", "POD-TEE-SLT-2026")
-                                    addProperty("product", "Heavyweight T-Shirt")
-                                    addProperty("color", "Charcoal Slate")
+                                    addProperty("id", "ORD-8821")
+                                    addProperty("sku", "POD-HET-FG-2026")
+                                    addProperty("product", "Heavyweight T-Shirt (240 GSM)")
+                                    addProperty("color", "Forest Green")
+                                    addProperty("placement", "Chest Center (11\" x 13\")")
+                                    addProperty("status", "PRINTING")
+                                    addProperty("progressPercent", 68)
+                                    addProperty("vectorDpi", 300)
+                                    addProperty("timestamp", now - 1800000)
+                                })
+                                add(JsonObject().apply {
+                                    addProperty("id", "ORD-8820")
+                                    addProperty("sku", "POD-HOD-TC-2026")
+                                    addProperty("product", "Vintage Hoodie (380 GSM)")
+                                    addProperty("color", "Terracotta")
                                     addProperty("placement", "Chest Center (11\" x 13\")")
                                     addProperty("status", "READY")
                                     addProperty("progressPercent", 100)
                                     addProperty("vectorDpi", 300)
-                                    addProperty("timestamp", now - 3600000)
+                                    addProperty("timestamp", now - 7200000)
+                                })
+                                add(JsonObject().apply {
+                                    addProperty("id", "ORD-8819")
+                                    addProperty("sku", "POD-MUG-DT-2026")
+                                    addProperty("product", "Ceramic Mug (11 oz)")
+                                    addProperty("color", "Dark Teal")
+                                    addProperty("placement", "Full Wrap Print")
+                                    addProperty("status", "QUEUED")
+                                    addProperty("progressPercent", 25)
+                                    addProperty("vectorDpi", 300)
+                                    addProperty("timestamp", now - 600000)
+                                })
+                                add(JsonObject().apply {
+                                    addProperty("id", "ORD-8818")
+                                    addProperty("sku", "POD-TOT-CW-2026")
+                                    addProperty("product", "Canvas Tote Bag (Bull Denim)")
+                                    addProperty("color", "Classic White")
+                                    addProperty("placement", "Center Graphic")
+                                    addProperty("status", "READY")
+                                    addProperty("progressPercent", 100)
+                                    addProperty("vectorDpi", 300)
+                                    addProperty("timestamp", now - 14400000)
                                 })
                             }
                             sendJsonResponse(writer, 200, gson.toJson(array))
+                        }
+
+                        // 8a. POD Order Placement POST
+                        method == "POST" && (path.startsWith("/api/pod/order") || path.startsWith("/api/pod/orders")) -> {
+                            val rootJson = try {
+                                gson.fromJson(postData, JsonObject::class.java)
+                            } catch (_: Exception) {
+                                JsonObject()
+                            }
+                            val orderId = "ORD-" + (1000 + (now % 9000))
+                            val product = rootJson.get("product")?.asString ?: "Heavyweight T-Shirt"
+                            val color = rootJson.get("color")?.asString ?: "Dark Teal"
+                            val placement = rootJson.get("placement")?.asString ?: "Chest Center (11\" x 13\")"
+                            val grossCents = rootJson.get("grossCents")?.asLong ?: 2800L
+                            val supplierCostCents = rootJson.get("supplierCostCents")?.asLong ?: 1050L
+                            val sku = rootJson.get("sku")?.asString ?: "POD-HET-DT-2026"
+
+                            db.logDao().insertLog(
+                                LogEntity(
+                                    agentId = "Order Ingestion Agent",
+                                    message = "Received inbound API order #$orderId: $product ($color). Production routed to DTG print queue.",
+                                    timestamp = now
+                                )
+                            )
+                            db.ledgerDao().insertEntry(
+                                LedgerEntity(
+                                    timestamp = now,
+                                    code = "TX-POD-${now % 100000}",
+                                    store = "Print Defy Pop-Up",
+                                    platform = "Printify Direct API",
+                                    description = "$product ($color) - Order #$orderId",
+                                    accountDebit = "1010 Stripe Clearing",
+                                    accountCredit = "4010 POD Sales Revenue",
+                                    amountCents = grossCents,
+                                    hashToken = "0x" + UUID.randomUUID().toString().take(12),
+                                    category = "SALE"
+                                )
+                            )
+
+                            val res = JsonObject().apply {
+                                addProperty("status", "ORDER_PLACED")
+                                addProperty("orderId", orderId)
+                                addProperty("sku", sku)
+                                addProperty("product", product)
+                                addProperty("color", color)
+                                addProperty("placement", placement)
+                                addProperty("grossCents", grossCents)
+                                addProperty("vectorDpi", 300)
+                                addProperty("orderStatus", "PRINTING")
+                                addProperty("timestamp", now)
+                            }
+                            sendJsonResponse(writer, 200, gson.toJson(res))
                         }
 
                         method == "POST" && path.startsWith("/api/pod/generate") -> {

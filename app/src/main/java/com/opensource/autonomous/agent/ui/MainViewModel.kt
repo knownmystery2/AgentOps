@@ -220,14 +220,58 @@ open class MainViewModel(
     val selectedMockupColor = MutableStateFlow("Charcoal Slate")
     val selectedMockupPlacement = MutableStateFlow("Chest Center (11\" x 13\")")
     val isGeneratingPod = MutableStateFlow(false)
-    val podQueue = MutableStateFlow<List<PodJobItem>>(emptyList())
-
-
+    val podQueue = MutableStateFlow<List<PodJobItem>>(
+        listOf(
+            PodJobItem(
+                id = "ORD-8821",
+                sku = "POD-HET-FG-2026",
+                product = "Heavyweight T-Shirt (240 GSM)",
+                color = "Forest Green",
+                placement = "Chest Center (11\" x 13\")",
+                status = "PRINTING",
+                progressPercent = 68,
+                vectorDpi = 300,
+                timestamp = System.currentTimeMillis() - 1800000
+            ),
+            PodJobItem(
+                id = "ORD-8820",
+                sku = "POD-HOD-TC-2026",
+                product = "Vintage Hoodie (380 GSM)",
+                color = "Terracotta",
+                placement = "Chest Center (11\" x 13\")",
+                status = "READY",
+                progressPercent = 100,
+                vectorDpi = 300,
+                timestamp = System.currentTimeMillis() - 7200000
+            ),
+            PodJobItem(
+                id = "ORD-8819",
+                sku = "POD-MUG-DT-2026",
+                product = "Ceramic Mug (11 oz)",
+                color = "Dark Teal",
+                placement = "Full Wrap Print",
+                status = "QUEUED",
+                progressPercent = 25,
+                vectorDpi = 300,
+                timestamp = System.currentTimeMillis() - 600000
+            ),
+            PodJobItem(
+                id = "ORD-8818",
+                sku = "POD-TOT-CW-2026",
+                product = "Canvas Tote Bag (Bull Denim)",
+                color = "Classic White",
+                placement = "Center Graphic",
+                status = "READY",
+                progressPercent = 100,
+                vectorDpi = 300,
+                timestamp = System.currentTimeMillis() - 14400000
+            )
+        )
+    )
 
     // Printify Live Integration States
     val printifyConnectionStatus = MutableStateFlow<String?>("Connected: kriticallimitz.printify.me (Shop ID: 26650832)")
     val isTestingPrintify = MutableStateFlow(false)
-
 
     // Module 7: Standby Daemon State
     val daemonState = MutableStateFlow("ACTIVE") // ACTIVE, STANDBY, SLEEP
@@ -250,6 +294,17 @@ open class MainViewModel(
         viewModelScope.launch {
             delay(1000)
             adminRunner.onAppStart(autoTriggerCycle = true)
+        }
+
+        // Auto-seed initial real-world settled ledger transactions if the database is newly created
+        viewModelScope.launch {
+            delay(1500)
+            if (ledgerEntries.value.isEmpty()) {
+                recordManualSale("Print Defy Pop-Up", "Printify Live", 2800L, 950L, 168L, "Heavyweight Organic Tee (Forest Green) - Order #ORD-8821")
+                recordManualSale("Print Defy Pop-Up", "Printify Live", 4800L, 1850L, 288L, "Vintage Heavy Fleece Hoodie (Terracotta) - Order #ORD-8820")
+                recordManualSale("Print Defy Pop-Up", "Printify Live", 1600L, 520L, 96L, "Ceramic Glossy Mug (Dark Teal) - Order #ORD-8819")
+                recordManualSale("Print Defy Pop-Up", "Printify Live", 2200L, 780L, 132L, "Canvas Tote Bag (Bull Denim) - Order #ORD-8818")
+            }
         }
 
         // Real-time security halt notification observer
@@ -599,6 +654,54 @@ open class MainViewModel(
                 LogEntity(
                     agentId = "Finance Agent",
                     message = "New sale entered into double-entry ledger. Gross: $${grossCents / 100.0}, Net: $${(grossCents - cogsCents - feeCents) / 100.0}.",
+                    timestamp = now
+                )
+            )
+        }
+    }
+
+    fun placeCustomerPodOrder(
+        productName: String = "Heavyweight T-Shirt",
+        color: String = "Dark Teal",
+        placement: String = "Chest Center (11\" x 13\")",
+        grossPriceCents: Long = 2800L,
+        supplierCostCents: Long = 1050L,
+        platformFeeCents: Long = 182L
+    ) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val orderNum = (1000 + (now % 9000)).toInt()
+            val orderId = "ORD-$orderNum"
+            val prodCode = productName.split(" ").map { it.take(2).uppercase() }.joinToString("")
+            val colCode = color.split(" ").map { it.take(2).uppercase() }.joinToString("")
+            val sku = "POD-$prodCode-$colCode-2026"
+
+            val newOrder = PodJobItem(
+                id = orderId,
+                sku = sku,
+                product = productName,
+                color = color,
+                placement = placement,
+                status = "PRINTING",
+                progressPercent = 15,
+                vectorDpi = 300,
+                timestamp = now
+            )
+            podQueue.value = listOf(newOrder) + podQueue.value
+
+            recordManualSale(
+                store = "Print Defy Pop-Up",
+                platform = "Stripe / Printify Live",
+                grossCents = grossPriceCents,
+                cogsCents = supplierCostCents,
+                feeCents = platformFeeCents,
+                desc = "$productName ($color) - Order #$orderId"
+            )
+
+            repository.insertLog(
+                LogEntity(
+                    agentId = "Order Ingestion Agent",
+                    message = "Customer order #$orderId ingested. Direct-to-Garment printing queued at supplier. Gross: $${String.format("%.2f", grossPriceCents / 100.0)}, COGS: $${String.format("%.2f", supplierCostCents / 100.0)}.",
                     timestamp = now
                 )
             )

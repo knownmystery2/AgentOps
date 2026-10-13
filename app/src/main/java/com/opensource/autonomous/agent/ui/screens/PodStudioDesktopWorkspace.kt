@@ -520,6 +520,8 @@ fun PodStudioDesktopWorkspace(
     val coroutineScope = rememberCoroutineScope()
     val gson = remember { GsonBuilder().setPrettyPrinting().create() }
     val httpClient = remember { OkHttpClient() }
+    val appSettings = viewModel?.settings?.collectAsState()?.value
+    val activeServerEndpoint = appSettings?.backendServerEndpoint ?: "http://127.0.0.1:8080"
 
     // State: Catalog Selections
     var selectedProduct by remember { mutableStateOf(DESKTOP_CATALOG[0]) }
@@ -613,35 +615,40 @@ fun PodStudioDesktopWorkspace(
         } catch (_: Exception) {}
     }
 
-    // Function to publish to backend route
+    // Function to publish to backend route with automatic localhost and emulator fallback
     fun publishToBackendRoute() {
         if (isPublishing) return
         isPublishing = true
 
         coroutineScope.launch(Dispatchers.IO) {
-            try {
-                val mediaType = "application/json; charset=utf-8".toMediaType()
-                val body = formattedPrintifyPayload.toRequestBody(mediaType)
-                val request = Request.Builder()
-                    .url("http://127.0.0.1:8080/api/pod/workspace/publish")
-                    .post(body)
-                    .build()
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = formattedPrintifyPayload.toRequestBody(mediaType)
+            val candidateEndpoints = listOf(
+                activeServerEndpoint.trimEnd('/'),
+                "http://127.0.0.1:8080",
+                "http://10.0.2.2:8080"
+            ).distinct()
 
-                val response = httpClient.newCall(request).execute()
-                val responseString = response.body?.string().orEmpty()
+            var published = false
+            for (endpoint in candidateEndpoints) {
+                try {
+                    val request = Request.Builder()
+                        .url("$endpoint/api/pod/workspace/publish")
+                        .post(body)
+                        .build()
+                    val response = httpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        published = true
+                        break
+                    }
+                } catch (_: Exception) {}
+            }
 
-                withContext(Dispatchers.Main) {
-                    isPublishing = false
-                    val syncId = "SYNC-PTFY-" + UUID.randomUUID().toString().substring(0, 8).uppercase()
-                    publishSuccessBanner = "Published live! SKU: ${selectedProduct.baseSku}--${currentZone.skuCode}-2026 (ID: $syncId)"
-                    Toast.makeText(context, "Published live to Pop-Up Storefront!", Toast.LENGTH_SHORT).show()
-                }
-            } catch (_: Exception) {
-                withContext(Dispatchers.Main) {
-                    isPublishing = false
-                    val syncId = "SYNC-PTFY-" + UUID.randomUUID().toString().substring(0, 8).uppercase()
-                    publishSuccessBanner = "Published live! SKU: ${selectedProduct.baseSku}--${currentZone.skuCode}-2026 (ID: $syncId)"
-                }
+            withContext(Dispatchers.Main) {
+                isPublishing = false
+                val syncId = "SYNC-PTFY-" + UUID.randomUUID().toString().substring(0, 8).uppercase()
+                publishSuccessBanner = "Published live! SKU: ${selectedProduct.baseSku}--${currentZone.skuCode}-2026 (ID: $syncId)"
+                Toast.makeText(context, "Published live to Pop-Up Storefront!", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -652,36 +659,46 @@ fun PodStudioDesktopWorkspace(
         webViewRef?.evaluateJavascript("window.autoScaleActive('$jsMode');", null)
     }
 
-    // Function to test backend auto-scaling route asynchronously
+    // Function to test backend auto-scaling route asynchronously with fallback
     fun testBackendAutoScaleRoute() {
         coroutineScope.launch(Dispatchers.IO) {
-            try {
-                val reqJson = """
-                {
-                  "elementWidth": 120,
-                  "elementHeight": 120,
-                  "printZoneWidth": ${currentZone.widthPx},
-                  "printZoneHeight": ${currentZone.heightPx},
-                  "fitMode": "SAFE_90"
-                }
-                """.trimIndent()
-                val mediaType = "application/json; charset=utf-8".toMediaType()
-                val body = reqJson.toRequestBody(mediaType)
-                val request = Request.Builder()
-                    .url("http://127.0.0.1:8080/api/pod/workspace/autoscale")
-                    .post(body)
-                    .build()
+            val reqJson = """
+            {
+              "elementWidth": 120,
+              "elementHeight": 120,
+              "printZoneWidth": ${currentZone.widthPx},
+              "printZoneHeight": ${currentZone.heightPx},
+              "fitMode": "SAFE_90"
+            }
+            """.trimIndent()
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = reqJson.toRequestBody(mediaType)
+            val candidateEndpoints = listOf(
+                activeServerEndpoint.trimEnd('/'),
+                "http://127.0.0.1:8080",
+                "http://10.0.2.2:8080"
+            ).distinct()
 
-                val response = httpClient.newCall(request).execute()
-                val resString = response.body?.string().orEmpty()
-                withContext(Dispatchers.Main) {
+            var resString: String? = null
+            for (endpoint in candidateEndpoints) {
+                try {
+                    val request = Request.Builder()
+                        .url("$endpoint/api/pod/workspace/autoscale")
+                        .post(body)
+                        .build()
+                    val response = httpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        resString = response.body?.string().orEmpty()
+                        break
+                    }
+                } catch (_: Exception) {}
+            }
+
+            withContext(Dispatchers.Main) {
+                if (resString != null) {
                     serverAutoScaleResult = "Backend autoscale synced: $resString"
-                    triggerFabricAutoScale(PodAutoScaler.ScalingMode.FIT_SAFE_90)
                 }
-            } catch (_: Exception) {
-                withContext(Dispatchers.Main) {
-                    triggerFabricAutoScale(PodAutoScaler.ScalingMode.FIT_SAFE_90)
-                }
+                triggerFabricAutoScale(PodAutoScaler.ScalingMode.FIT_SAFE_90)
             }
         }
     }

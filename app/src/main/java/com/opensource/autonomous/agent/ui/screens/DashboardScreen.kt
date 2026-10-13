@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
@@ -36,7 +37,8 @@ fun DashboardScreen(
     viewModel: MainViewModel,
     onNavigateToApprovals: () -> Unit,
     onNavigateToLedger: () -> Unit,
-    onNavigateToStandby: () -> Unit
+    onNavigateToStandby: () -> Unit,
+    onNavigateToMockupStudio: () -> Unit = {}
 ) {
     var businessPrompt by remember { mutableStateOf("") }
     val decisions by viewModel.decisions.collectAsState()
@@ -70,6 +72,11 @@ fun DashboardScreen(
     val netProfitCents = grossCents - cogsCents - feeCents
     val pendingDecisionsCount = decisions.size
     val pendingPhoneTasksCount = accountTasks.count { !it.isCompleted }
+
+    // Print-On-Demand Business & Order Metrics
+    val podQueue by viewModel.podQueue.collectAsState()
+    val activePodOrdersCount = podQueue.count { it.status == "PRINTING" || it.status == "QUEUED" || it.status == "RENDERING" || it.status == "COMPILED" }
+    val readyPodOrdersCount = podQueue.count { it.status == "READY" }
 
     // Worker Queue Counters
     val pendingWorkerTasks = swarmTasks.count { it.status == "PENDING" }
@@ -278,20 +285,24 @@ fun DashboardScreen(
                             title = "Gross Revenue",
                             value = "$${String.format("%.2f", grossCents / 100.0)}",
                             sub = "${salesList.size} live sales settled",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToLedger,
+                            testTag = "metric_gross_revenue"
                         )
                         MetricBox(
                             title = "Net Profit",
                             value = "$${String.format("%.2f", netProfitCents / 100.0)}",
                             sub = "Whole cents ledger",
                             valueColor = ProfitGreen,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToLedger,
+                            testTag = "metric_net_profit"
                         )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Navigation Badges
+                    // Navigation Badges (Row 1: Approvals & Phone 2FA)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -308,6 +319,289 @@ fun DashboardScreen(
                             label = { Text("$pendingPhoneTasksCount Phone 2FA") },
                             modifier = Modifier.weight(1f).testTag("phone_tasks_chip")
                         )
+                    }
+
+                    // Navigation Badges (Row 2: Ledger Balance & POD Studio Workspace)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AssistChip(
+                            onClick = onNavigateToLedger,
+                            leadingIcon = { Icon(Icons.Default.AccountBalance, contentDescription = null, tint = ProfitGreen) },
+                            label = { Text("Audit Ledger ($${String.format("%.2f", netProfitCents / 100.0)})") },
+                            modifier = Modifier.weight(1f).testTag("nav_to_ledger_chip")
+                        )
+                        AssistChip(
+                            onClick = onNavigateToMockupStudio,
+                            leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null, tint = Color(0xFF38BDF8)) },
+                            label = { Text("POD Mockup Studio") },
+                            modifier = Modifier.weight(1f).testTag("nav_to_mockup_studio_chip")
+                        )
+                    }
+                }
+            }
+        }
+
+        // High-Level Print-On-Demand Business Operations Dashboard
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("pod_business_dashboard_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = BrandEmerald.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.Palette,
+                                        contentDescription = "POD",
+                                        tint = BrandEmerald,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Print-On-Demand Operations",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Direct-to-Garment • Printify & Stripe Live Pipeline",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = BrandEmerald.copy(alpha = 0.18f)
+                        ) {
+                            Text(
+                                text = "300 DPI Vector",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BrandEmerald,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // POD High-Level Metrics Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        MetricBox(
+                            title = "Active Orders",
+                            value = "$activePodOrdersCount in production",
+                            sub = "${podQueue.size} lifetime orders",
+                            valueColor = if (activePodOrdersCount > 0) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                            testTag = "pod_metric_active_orders"
+                        )
+                        MetricBox(
+                            title = "Ready to Ship",
+                            value = "$readyPodOrdersCount completed",
+                            sub = "Print QC verified",
+                            valueColor = ProfitGreen,
+                            modifier = Modifier.weight(1f),
+                            testTag = "pod_metric_ready_orders"
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Secondary POD Metric Row: Ledger Balance & Catalog
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        MetricBox(
+                            title = "Recent Ledger Balance",
+                            value = "$${String.format("%.2f", netProfitCents / 100.0)}",
+                            sub = "Gross $${String.format("%.2f", grossCents / 100.0)} • Whole cents",
+                            valueColor = ProfitGreen,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToLedger,
+                            testTag = "pod_metric_ledger_balance"
+                        )
+                        MetricBox(
+                            title = "Print Catalogs",
+                            value = "5 Core Blanks",
+                            sub = "Tee, Hoodie, Mug, Tote, Art",
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToMockupStudio,
+                            testTag = "pod_metric_catalogs"
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Quick Route Actions
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onNavigateToMockupStudio,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.weight(1.2f).testTag("dashboard_open_pod_studio_btn")
+                        ) {
+                            Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Open POD Studio", maxLines = 1)
+                        }
+
+                        FilledTonalButton(
+                            onClick = {
+                                viewModel.placeCustomerPodOrder(
+                                    productName = "Heavyweight T-Shirt",
+                                    color = "Dark Teal",
+                                    placement = "Chest Center (11\" x 13\")",
+                                    grossPriceCents = 2800L,
+                                    supplierCostCents = 1050L,
+                                    platformFeeCents = 182L
+                                )
+                            },
+                            modifier = Modifier.weight(1f).testTag("dashboard_place_pod_order_btn")
+                        ) {
+                            Icon(Icons.Default.AddShoppingCart, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("+ Test Order", maxLines = 1)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Active POD Orders List
+                    Text(
+                        text = "Active Print Queue & Orders (${podQueue.take(4).size} of ${podQueue.size})",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (podQueue.isEmpty()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "No active print orders queued. Tap '+ Test Order' to trigger a live DTG order.",
+                                modifier = Modifier.padding(14.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            podQueue.take(4).forEach { order ->
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onNavigateToMockupStudio() }
+                                        .testTag("pod_order_card_${order.id}")
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = order.id,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = order.sku,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = when (order.status) {
+                                                    "READY" -> ProfitGreen.copy(alpha = 0.15f)
+                                                    "PRINTING" -> Color(0xFFF59E0B).copy(alpha = 0.15f)
+                                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = order.status,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = when (order.status) {
+                                                        "READY" -> ProfitGreen
+                                                        "PRINTING" -> Color(0xFFF59E0B)
+                                                        else -> MaterialTheme.colorScheme.primary
+                                                    },
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+
+                                        Text(
+                                            text = "${order.product} • ${order.color}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "Zone: ${order.placement} • ${order.vectorDpi} DPI",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        if (order.status == "PRINTING" || order.progressPercent < 100) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                LinearProgressIndicator(
+                                                    progress = { order.progressPercent / 100f },
+                                                    modifier = Modifier.weight(1f).height(6.dp),
+                                                    color = if (order.status == "PRINTING") Color(0xFFF59E0B) else MaterialTheme.colorScheme.primary
+                                                )
+                                                Text(
+                                                    text = "${order.progressPercent}%",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1802,12 +2096,21 @@ fun MetricBox(
     value: String,
     sub: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: (() -> Unit)? = null,
+    testTag: String? = null
 ) {
+    val clickableModifier = if (onClick != null) {
+        modifier.clickable { onClick() }
+    } else {
+        modifier
+    }
+    val finalModifier = if (testTag != null) clickableModifier.testTag(testTag) else clickableModifier
+
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(10.dp),
-        modifier = modifier
+        modifier = finalModifier
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

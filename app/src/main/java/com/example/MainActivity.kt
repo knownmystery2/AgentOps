@@ -89,7 +89,8 @@ fun AgentOpsMainApp(viewModel: MainViewModel) {
                     viewModel = viewModel,
                     onNavigateToApprovals = { currentTab = ScreenTab.APPROVALS },
                     onNavigateToLedger = { currentTab = ScreenTab.LEDGER },
-                    onNavigateToStandby = { currentTab = ScreenTab.STANDBY }
+                    onNavigateToStandby = { currentTab = ScreenTab.STANDBY },
+                    onNavigateToMockupStudio = { currentTab = ScreenTab.POD }
                 )
                 ScreenTab.OVERSEER -> GodOverseerScreen(
                     viewModel = viewModel
