@@ -21,6 +21,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import com.opensource.autonomous.agent.network.PrintifyApiService
+import com.opensource.autonomous.agent.network.PrintifyImage
+import com.opensource.autonomous.agent.network.PrintifyPrintRegion
+import com.opensource.autonomous.agent.network.PrintifyProductRequest
+
 
 data class MarketingBundle(
     val niche: String,
@@ -1480,6 +1487,68 @@ open class MainViewModel(
     fun clearBusinessAnalysis() {
         businessAnalysis.value = null
         businessOperationStatusMessage.value = null
+    }
+
+    // Printify Integration
+    private val printifyApi: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.printify.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    private val printifyService: PrintifyApiService by lazy {
+        printifyApi.create(PrintifyApiService::class.java)
+    }
+
+    fun calculatePrintifyCoordinates(
+        pixelX: Float,
+        pixelY: Float,
+        containerWidth: Float,
+        containerHeight: Float,
+        scaleX: Float,
+        scaleY: Float,
+        angle: Float
+    ): PrintifyPrintRegion {
+        return PrintifyPrintRegion(
+            place = "front",
+            images = listOf(
+                PrintifyImage(
+                    id = "uploaded_img_01",
+                    x = (pixelX / containerWidth * 100).toInt(),
+                    y = (pixelY / containerHeight * 100).toInt(),
+                    scale_x = scaleX,
+                    scale_y = scaleY,
+                    angle = angle.toInt()
+                )
+            )
+        )
+    }
+
+    fun sendToStore(
+        shopId: String,
+        blueprintId: String,
+        providerId: Int,
+        variantIds: List<Int>,
+        printRegion: PrintifyPrintRegion
+    ) {
+        viewModelScope.launch {
+            val token = "Bearer ${settings.value?.keyPrintify ?: ""}"
+            try {
+                val productRequest = PrintifyProductRequest(
+                    title = "User Custom Creation",
+                    description = "Designed via custom mockup builder application",
+                    blueprint_id = blueprintId,
+                    print_provider_id = providerId,
+                    variants = variantIds,
+                    print_regions = listOf(printRegion)
+                )
+                val response = printifyService.publishProduct(token, shopId, productRequest)
+                printifyService.publishProductLive(token, shopId, response.id)
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
     }
 }
 

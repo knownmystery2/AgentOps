@@ -110,6 +110,7 @@ dependencies {
   implementation(libs.gson)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
+  implementation(libs.converter.gson)
   implementation(libs.firebase.ai)
   implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
   // Uncomment to use Firestore:
