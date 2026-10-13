@@ -74,7 +74,7 @@ fun PodMockupScreen(
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                         Text(
-                            text = "POD Studio & Vector Pipeline",
+                            text = "Print Defy Pop Up Store",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -93,7 +93,7 @@ fun PodMockupScreen(
                     }
                 }
                 Text(
-                    text = "High-precision 300 DPI vector placement engine & live SKU creation pipeline.",
+                    text = "High-precision 300 DPI vector placement engine & Printify fulfillment pipeline.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -314,7 +314,7 @@ fun PodMockupScreen(
                             } else {
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = BrandEmerald)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("AI POD Pitch", fontSize = 12.sp)
+                                Text("AI Pitch", fontSize = 12.sp)
                             }
                         }
                     }
@@ -387,7 +387,7 @@ fun PodMockupScreen(
                 }
             }
 
-            // Printify Live Storefront Integration
+            // Printify Pop Up Store Integration
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(12.dp),
@@ -419,7 +419,7 @@ fun PodMockupScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Automated vector compilation for Shop #26650832. Customer pays at purchase ($0 upfront to founder).",
+                        text = "Automated vector compilation for Printify Pop Up Store. Customer pays at purchase ($0 upfront to founder).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -430,13 +430,13 @@ fun PodMockupScreen(
                     ) {
                         Icon(Icons.Default.Storefront, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Deploy SKU to kriticallimitz.printify.me", fontSize = 13.sp)
+                        Text("Deploy SKU to Printify Shop", fontSize = 13.sp)
                     }
                 }
             }
 
             // Live Print-on-Demand Generation Queue
-            Text("Live POD Production Queue (${podQueue.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text("Live Production Queue (${podQueue.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 podQueue.forEach { job ->
                     PodJobQueueCard(job = job)
