@@ -545,6 +545,9 @@ fun PodStudioDesktopWorkspace(
     var isPublishing by remember { mutableStateOf(false) }
     var publishSuccessBanner by remember { mutableStateOf<String?>(null) }
 
+    // State: Theme Toggle (defaults to true for dark theme matching the rest of the application)
+    var isDarkTheme by remember { mutableStateOf(true) }
+
     // State: Server Auto-Scale Telemetry Verification
     var serverAutoScaleResult by remember { mutableStateOf<String?>(null) }
 
@@ -683,24 +686,50 @@ fun PodStudioDesktopWorkspace(
         }
     }
 
+    // Dynamic Theme Tokens
+    val workspaceBg = if (isDarkTheme) Color(0xFF0A0F1D) else Color(0xFFF4F5F7)
+    val headerBg = if (isDarkTheme) Color(0xFF111827) else Color(0xFF1E2022)
+    val headerBorder = if (isDarkTheme) Color(0xFF1F2937) else Color(0xFF2E3236)
+    val sidebarBg = if (isDarkTheme) Color(0xFF111827) else Color.White
+    val sidebarBorder = if (isDarkTheme) Color(0xFF1F2937) else Color(0xFFE5E7EB)
+    val cardBg = if (isDarkTheme) Color(0xFF1F2937) else Color.White
+    val cardAltBg = if (isDarkTheme) Color(0xFF161F2E) else Color(0xFFF9FAFB)
+    val cardBorder = if (isDarkTheme) Color(0xFF374151) else Color(0xFFE5E7EB)
+    val cardSelectedBg = if (isDarkTheme) Color(0xFF1E3A8A).copy(alpha = 0.45f) else Color(0xFFEFF6FF)
+    val cardSelectedBorder = if (isDarkTheme) Color(0xFF3B82F6) else Color(0xFF2563EB)
+    val textPrimary = if (isDarkTheme) Color(0xFFF9FAFB) else Color(0xFF111827)
+    val textSecondary = if (isDarkTheme) Color(0xFF9CA3AF) else Color(0xFF6B7280)
+    val textMuted = if (isDarkTheme) Color(0xFF6B7280) else Color(0xFF9CA3AF)
+    val dividerColor = if (isDarkTheme) Color(0xFF1F2937) else Color(0xFFE5E7EB)
+    val sectionHeaderColor = if (isDarkTheme) Color(0xFF9CA3AF) else Color(0xFF6B7280)
+    val centerCanvasBg = if (isDarkTheme) Color(0xFF060913) else Color(0xFF18181B)
+    val inputBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF9FAFB)
+    val inputBorder = if (isDarkTheme) Color(0xFF374151) else Color(0xFFD1D5DB)
+    val codeBoxBg = if (isDarkTheme) Color(0xFF030712) else Color(0xFF171717)
+    val codeBoxBorder = if (isDarkTheme) Color(0xFF1F2937) else Color(0xFF262626)
+    val badgeBg = if (isDarkTheme) Color(0xFF064E3B) else Color(0xFFECFDF5)
+    val badgeBorder = if (isDarkTheme) Color(0xFF059669) else Color(0xFFA7F3D0)
+    val badgeText = if (isDarkTheme) Color(0xFF34D399) else Color(0xFF059669)
+
     // ========================================================================
     // ROOT UI: THREE-COLUMN DESKTOP ENTERPRISE WORKSPACE
     // ========================================================================
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF4F5F7))
+            .background(workspaceBg)
             .testTag("pod_desktop_workspace")
     ) {
         // --------------------------------------------------------------------
-        // 1. FIXED TOP APPLICATION HEADER (Height 64dp, Dark Matte Theme)
+        // 1. FIXED TOP APPLICATION HEADER (Height 64dp)
         // --------------------------------------------------------------------
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp),
-            color = Color(0xFF1E2022),
-            shadowElevation = 6.dp
+            color = headerBg,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, headerBorder)
         ) {
             Row(
                 modifier = Modifier
@@ -721,13 +750,13 @@ fun PodStudioDesktopWorkspace(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFFA3A3A3)
+                            tint = if (isDarkTheme) Color(0xFFD1D5DB) else Color(0xFFA3A3A3)
                         )
                     }
                     Text(
                         text = "← Back to Storefront",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color(0xFFA3A3A3),
+                            color = if (isDarkTheme) Color(0xFFD1D5DB) else Color(0xFFA3A3A3),
                             fontWeight = FontWeight.Medium
                         ),
                         modifier = Modifier.clickable { onNavigateBack() }
@@ -748,44 +777,77 @@ fun PodStudioDesktopWorkspace(
                     Text(
                         text = "Print Defy Pop Up Store Engine v4.0 (Desktop Production Mode)",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color(0xFFE5E5E5),
+                            color = if (isDarkTheme) Color(0xFFF3F4F6) else Color(0xFFE5E5E5),
                             fontWeight = FontWeight.SemiBold
                         )
                     )
                 }
 
-                // Right: Primary Call-to-Action Button
-                Button(
-                    onClick = { publishToBackendRoute() },
-                    enabled = !isPublishing,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2563EB),
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
-                    modifier = Modifier.testTag("publish_live_btn")
+                // Right: Controls & Primary Call-to-Action Button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (isPublishing) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Syncing...", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = "Publish",
-                            tint = Color(0xFFFDE047),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Publish Live to Pop-Up Store", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    // Dark / Light Theme Toggle Button
+                    Surface(
+                        onClick = { isDarkTheme = !isDarkTheme },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isDarkTheme) Color(0xFF1F2937) else Color(0xFF374151),
+                        border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF374151) else Color(0xFF4B5563)),
+                        modifier = Modifier.testTag("pod_theme_toggle_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                contentDescription = if (isDarkTheme) "Toggle Light Theme" else "Toggle Dark Theme",
+                                tint = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFFFBBF24),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = if (isDarkTheme) "Dark Theme" else "Light Theme",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // Primary Call-to-Action Button
+                    Button(
+                        onClick = { publishToBackendRoute() },
+                        enabled = !isPublishing,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2563EB),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                        modifier = Modifier.testTag("publish_live_btn")
+                    ) {
+                        if (isPublishing) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Syncing...", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = "Publish",
+                                tint = Color(0xFFFDE047),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Publish Live to Pop-Up Store", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
-            }
         }
 
         // Success Notification Toast
@@ -830,8 +892,8 @@ fun PodStudioDesktopWorkspace(
                 modifier = Modifier
                     .width(320.dp)
                     .fillMaxHeight()
-                    .background(Color.White)
-                    .border(BorderStroke(1.dp, Color(0xFFE5E7EB)))
+                    .background(sidebarBg)
+                    .border(BorderStroke(1.dp, sidebarBorder))
                     .verticalScroll(rememberScrollState())
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -847,16 +909,16 @@ fun PodStudioDesktopWorkspace(
                             text = "SELECT PRODUCT BLANK",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF6B7280)
+                                color = sectionHeaderColor
                             )
                         )
                         Text(
                             text = "Tier 1 Verified",
                             fontSize = 10.sp,
-                            color = Color(0xFF2563EB),
+                            color = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFF2563EB),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier
-                                .background(Color(0xFFEFF6FF), RoundedCornerShape(4.dp))
+                                .background(if (isDarkTheme) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFFEFF6FF), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -869,11 +931,11 @@ fun PodStudioDesktopWorkspace(
                                 .fillMaxWidth()
                                 .testTag("product_blank_${blank.id}"),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color(0xFFEFF6FF) else Color.White
+                                containerColor = if (isSelected) cardSelectedBg else cardBg
                             ),
                             border = BorderStroke(
                                 width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) Color(0xFF2563EB) else Color(0xFFE5E7EB)
+                                color = if (isSelected) cardSelectedBorder else cardBorder
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
@@ -892,7 +954,7 @@ fun PodStudioDesktopWorkspace(
                                         modifier = Modifier
                                             .size(36.dp)
                                             .background(
-                                                if (isSelected) Color(0xFF2563EB) else Color(0xFFF3F4F6),
+                                                if (isSelected) Color(0xFF2563EB) else (if (isDarkTheme) Color(0xFF374151) else Color(0xFFF3F4F6)),
                                                 RoundedCornerShape(8.dp)
                                             ),
                                         contentAlignment = Alignment.Center
@@ -900,13 +962,13 @@ fun PodStudioDesktopWorkspace(
                                         Icon(
                                             imageVector = Icons.Default.Checkroom,
                                             contentDescription = null,
-                                            tint = if (isSelected) Color.White else Color(0xFF4B5563),
+                                            tint = if (isSelected) Color.White else (if (isDarkTheme) Color(0xFFD1D5DB) else Color(0xFF4B5563)),
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
                                     Column {
-                                        Text(blank.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                                        Text(blank.weight, fontSize = 11.sp, color = Color(0xFF6B7280))
+                                        Text(blank.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textPrimary)
+                                        Text(blank.weight, fontSize = 11.sp, color = textSecondary)
                                     }
                                 }
                                 if (isSelected) {
@@ -924,7 +986,7 @@ fun PodStudioDesktopWorkspace(
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFFE5E7EB))
+                HorizontalDivider(color = dividerColor)
 
                 // Dynamic Garment Color Palette Swatches
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -937,14 +999,14 @@ fun PodStudioDesktopWorkspace(
                             text = "GARMENT PALETTE",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF6B7280)
+                                color = sectionHeaderColor
                             )
                         )
                         Text(
                             text = "${selectedColor.name} (${selectedColor.hex})",
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
-                            color = Color(0xFF374151)
+                            color = textSecondary
                         )
                     }
 
@@ -963,7 +1025,7 @@ fun PodStudioDesktopWorkspace(
                                         if (isSelected) {
                                             Modifier.border(2.dp, Color(0xFF2563EB), CircleShape)
                                         } else {
-                                            Modifier.border(1.dp, Color(0xFFD1D5DB), CircleShape)
+                                            Modifier.border(1.dp, if (isDarkTheme) Color(0xFF4B5563) else Color(0xFFD1D5DB), CircleShape)
                                         }
                                     )
                                     .padding(if (isSelected) 3.dp else 0.dp)
@@ -985,7 +1047,7 @@ fun PodStudioDesktopWorkspace(
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFFE5E7EB))
+                HorizontalDivider(color = dividerColor)
 
                 // Print Zone & Dimension Parameters
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -993,7 +1055,7 @@ fun PodStudioDesktopWorkspace(
                         text = "PRINT AREA & DIMENSIONS",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF6B7280)
+                            color = sectionHeaderColor
                         )
                     )
 
@@ -1020,9 +1082,9 @@ fun PodStudioDesktopWorkspace(
                                     .weight(1f)
                                     .testTag("zone_$zoneKey"),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) Color(0xFF2563EB) else Color.White
+                                    containerColor = if (isSelected) Color(0xFF2563EB) else cardBg
                                 ),
-                                border = BorderStroke(1.dp, if (isSelected) Color(0xFF2563EB) else Color(0xFFE5E7EB)),
+                                border = BorderStroke(1.dp, if (isSelected) Color(0xFF2563EB) else cardBorder),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Column(
@@ -1035,12 +1097,12 @@ fun PodStudioDesktopWorkspace(
                                         text = if (zoneKey == "chest") "Chest Center" else "Pocket Left",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = if (isSelected) Color.White else Color(0xFF374151)
+                                        color = if (isSelected) Color.White else textPrimary
                                     )
                                     Text(
                                         text = zone.dimensionLabel,
                                         fontSize = 10.sp,
-                                        color = if (isSelected) Color(0xFFBFDBFE) else Color(0xFF9CA3AF)
+                                        color = if (isSelected) Color(0xFFBFDBFE) else textSecondary
                                     )
                                 }
                             }
@@ -1051,8 +1113,8 @@ fun PodStudioDesktopWorkspace(
                 // DTG Production Specs
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                    border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    colors = CardDefaults.cardColors(containerColor = cardAltBg),
+                    border = BorderStroke(1.dp, cardBorder),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Column(
@@ -1063,13 +1125,13 @@ fun PodStudioDesktopWorkspace(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(Icons.Default.Print, contentDescription = null, tint = Color(0xFF4B5563), modifier = Modifier.size(16.dp))
-                            Text("Direct-to-Garment (DTG)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1F2937))
+                            Icon(Icons.Default.Print, contentDescription = null, tint = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFF4B5563), modifier = Modifier.size(16.dp))
+                            Text("Direct-to-Garment (DTG)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = textPrimary)
                         }
                         Text(
                             text = "Kornit Avalanche HD6 ink jet system with water-based eco inks. Minimum 300 DPI vector placement with white underbase.",
                             fontSize = 11.sp,
-                            color = Color(0xFF6B7280),
+                            color = textSecondary,
                             lineHeight = 15.sp
                         )
                     }
@@ -1083,7 +1145,7 @@ fun PodStudioDesktopWorkspace(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .background(Color(0xFF18181B)),
+                    .background(centerCanvasBg),
                 contentAlignment = Alignment.Center
             ) {
                 // Subtle Isometric Grid Canvas Floor
@@ -1221,6 +1283,11 @@ fun PodStudioDesktopWorkspace(
                                     )
                                     addJavascriptInterface(bridge, "PodBridge")
 
+                                    setOnTouchListener { v, _ ->
+                                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                                        false
+                                    }
+
                                     loadDataWithBaseURL(
                                         "https://printdefy.local/",
                                         generateFabricHtml(currentZone.widthPx, currentZone.heightPx),
@@ -1246,9 +1313,9 @@ fun PodStudioDesktopWorkspace(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 54.dp),
-                    color = Color(0xFF27272A).copy(alpha = 0.95f),
+                    color = if (isDarkTheme) Color(0xFF1E293B).copy(alpha = 0.95f) else Color(0xFF27272A).copy(alpha = 0.95f),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Color(0xFF3F3F46)),
+                    border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFF3F3F46)),
                     shadowElevation = 8.dp
                 ) {
                     Row(
@@ -1261,14 +1328,14 @@ fun PodStudioDesktopWorkspace(
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFA1A1AA)
+                            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFFA1A1AA)
                         )
 
                         // 1. Center XY
                         FilledTonalButton(
                             onClick = { triggerFabricAutoScale(PodAutoScaler.ScalingMode.CENTER_XY) },
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF3F3F46), contentColor = Color.White),
+                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFF3F3F46), contentColor = Color.White),
                             modifier = Modifier.testTag("autoscale_center")
                         ) {
                             Text("Center", fontSize = 11.sp)
@@ -1288,7 +1355,7 @@ fun PodStudioDesktopWorkspace(
                         FilledTonalButton(
                             onClick = { triggerFabricAutoScale(PodAutoScaler.ScalingMode.FIT_WIDTH) },
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF3F3F46), contentColor = Color.White),
+                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFF3F3F46), contentColor = Color.White),
                             modifier = Modifier.testTag("autoscale_width")
                         ) {
                             Text("Fit Width", fontSize = 11.sp)
@@ -1308,7 +1375,7 @@ fun PodStudioDesktopWorkspace(
                         FilledTonalButton(
                             onClick = { triggerFabricAutoScale(PodAutoScaler.ScalingMode.RESET_NORMAL) },
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF3F3F46), contentColor = Color.White),
+                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (isDarkTheme) Color(0xFF334155) else Color(0xFF3F3F46), contentColor = Color.White),
                             modifier = Modifier.testTag("autoscale_reset")
                         ) {
                             Text("Reset 1.0x", fontSize = 11.sp)
@@ -1321,9 +1388,9 @@ fun PodStudioDesktopWorkspace(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 14.dp),
-                    color = Color(0xFF18181B).copy(alpha = 0.9f),
+                    color = if (isDarkTheme) Color(0xFF0F172A).copy(alpha = 0.92f) else Color(0xFF18181B).copy(alpha = 0.9f),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF3F3F46))
+                    border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF1E293B) else Color(0xFF3F3F46))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -1339,7 +1406,7 @@ fun PodStudioDesktopWorkspace(
                             text = "300 DPI • CMYK Print Ready Vector Placement Engine Active",
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
-                            color = Color(0xFFD4D4D8)
+                            color = if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFFD4D4D8)
                         )
                     }
                 }
@@ -1352,8 +1419,8 @@ fun PodStudioDesktopWorkspace(
                 modifier = Modifier
                     .width(300.dp)
                     .fillMaxHeight()
-                    .background(Color.White)
-                    .border(BorderStroke(1.dp, Color(0xFFE5E7EB)))
+                    .background(sidebarBg)
+                    .border(BorderStroke(1.dp, sidebarBorder))
                     .verticalScroll(rememberScrollState())
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -1369,8 +1436,8 @@ fun PodStudioDesktopWorkspace(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(Icons.Default.Layers, contentDescription = null, tint = Color(0xFF4B5563), modifier = Modifier.size(16.dp))
-                            Text("Layers Stack", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4B5563))
+                            Icon(Icons.Default.Layers, contentDescription = null, tint = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFF4B5563), modifier = Modifier.size(16.dp))
+                            Text("Layers Stack", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                         }
                         IconButton(
                             onClick = { showAddLayerDialog = true },
@@ -1389,10 +1456,10 @@ fun PodStudioDesktopWorkspace(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("layer_circle_card"),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                        colors = CardDefaults.cardColors(containerColor = if (selectedLayerId == "layer_circle") cardSelectedBg else cardAltBg),
                         border = BorderStroke(
                             1.dp,
-                            if (selectedLayerId == "layer_circle") Color(0xFF2563EB) else Color(0xFFE5E7EB)
+                            if (selectedLayerId == "layer_circle") cardSelectedBorder else cardBorder
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -1410,14 +1477,15 @@ fun PodStudioDesktopWorkspace(
                                 Box(
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .border(1.dp, Color(0xFFD1D5DB), CircleShape),
+                                        .background(if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF3F4F6), CircleShape)
+                                        .border(1.dp, cardBorder, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("O", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
+                                    Text("O", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                                 }
                                 Column {
-                                    Text("Layer 1: Vector Base Circle", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                                    Text("Vector Geometry • r=56", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                                    Text("Layer 1: Vector Base Circle", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = textPrimary)
+                                    Text("Vector Geometry • r=56", fontSize = 10.sp, color = textSecondary)
                                 }
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1427,7 +1495,7 @@ fun PodStudioDesktopWorkspace(
                                     },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Icon(Icons.Default.ArrowUpward, contentDescription = "Up", tint = Color(0xFF6B7280), modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.ArrowUpward, contentDescription = "Up", tint = textSecondary, modifier = Modifier.size(14.dp))
                                 }
                                 IconButton(
                                     onClick = {
@@ -1439,7 +1507,7 @@ fun PodStudioDesktopWorkspace(
                                     Icon(
                                         imageVector = if (circleVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = "Toggle Visibility",
-                                        tint = if (circleVisible) Color(0xFF2563EB) else Color(0xFF9CA3AF),
+                                        tint = if (circleVisible) Color(0xFF2563EB) else textMuted,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -1456,10 +1524,10 @@ fun PodStudioDesktopWorkspace(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("layer_text_card"),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                        colors = CardDefaults.cardColors(containerColor = if (selectedLayerId == "layer_text") cardSelectedBg else cardAltBg),
                         border = BorderStroke(
                             1.dp,
-                            if (selectedLayerId == "layer_text") Color(0xFF2563EB) else Color(0xFFE5E7EB)
+                            if (selectedLayerId == "layer_text") cardSelectedBorder else cardBorder
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -1477,14 +1545,14 @@ fun PodStudioDesktopWorkspace(
                                 Box(
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .background(Color(0xFFDBEAFE), RoundedCornerShape(4.dp)),
+                                        .background(if (isDarkTheme) Color(0xFF1E3A8A) else Color(0xFFDBEAFE), RoundedCornerShape(4.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("T", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1D4ED8))
+                                    Text("T", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isDarkTheme) Color(0xFF93C5FD) else Color(0xFF1D4ED8))
                                 }
                                 Column {
-                                    Text("Layer 2: Typography Subtitle", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                                    Text("\"ORIGINAL VINTAGE\"", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                                    Text("Layer 2: Typography Subtitle", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = textPrimary)
+                                    Text("\"ORIGINAL VINTAGE\"", fontSize = 10.sp, color = textSecondary)
                                 }
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1494,7 +1562,7 @@ fun PodStudioDesktopWorkspace(
                                     },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Down", tint = Color(0xFF6B7280), modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Down", tint = textSecondary, modifier = Modifier.size(14.dp))
                                 }
                                 IconButton(
                                     onClick = {
@@ -1506,7 +1574,7 @@ fun PodStudioDesktopWorkspace(
                                     Icon(
                                         imageVector = if (textVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = "Toggle Visibility",
-                                        tint = if (textVisible) Color(0xFF2563EB) else Color(0xFF9CA3AF),
+                                        tint = if (textVisible) Color(0xFF2563EB) else textMuted,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -1515,13 +1583,13 @@ fun PodStudioDesktopWorkspace(
                     }
                 }
 
-                Divider(color = Color(0xFFE5E7EB))
+                HorizontalDivider(color = dividerColor)
 
                 // Active SKU Generation Engine Indicator
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                    border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                    colors = CardDefaults.cardColors(containerColor = cardAltBg),
+                    border = BorderStroke(1.dp, cardBorder),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Column(
@@ -1533,7 +1601,7 @@ fun PodStudioDesktopWorkspace(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(Icons.Default.Inventory2, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
-                            Text("Active SKU Generation Engine", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
+                            Text("Active SKU Generation Engine", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                         }
 
                         Text(
@@ -1541,11 +1609,11 @@ fun PodStudioDesktopWorkspace(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1F2937),
+                            color = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF1F2937),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.White, RoundedCornerShape(6.dp))
-                                .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(6.dp))
+                                .background(if (isDarkTheme) Color(0xFF0F172A) else Color.White, RoundedCornerShape(6.dp))
+                                .border(1.dp, cardBorder, RoundedCornerShape(6.dp))
                                 .padding(8.dp)
                         )
 
@@ -1554,32 +1622,32 @@ fun PodStudioDesktopWorkspace(
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .background(Color(0xFFECFDF5), RoundedCornerShape(4.dp))
-                                    .border(1.dp, Color(0xFFA7F3D0), RoundedCornerShape(4.dp))
+                                    .background(badgeBg, RoundedCornerShape(4.dp))
+                                    .border(1.dp, badgeBorder, RoundedCornerShape(4.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
-                                Text("Zero Risk", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.Security, contentDescription = null, tint = badgeText, modifier = Modifier.size(12.dp))
+                                Text("Zero Risk", fontSize = 10.sp, color = badgeText, fontWeight = FontWeight.Bold)
                             }
 
                             Row(
                                 modifier = Modifier
-                                    .background(Color(0xFFECFDF5), RoundedCornerShape(4.dp))
-                                    .border(1.dp, Color(0xFFA7F3D0), RoundedCornerShape(4.dp))
+                                    .background(badgeBg, RoundedCornerShape(4.dp))
+                                    .border(1.dp, badgeBorder, RoundedCornerShape(4.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
-                                Text("Supplier Sync Active", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.Check, contentDescription = null, tint = badgeText, modifier = Modifier.size(12.dp))
+                                Text("Supplier Sync Active", fontSize = 10.sp, color = badgeText, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
 
-                Divider(color = Color(0xFFE5E7EB))
+                HorizontalDivider(color = dividerColor)
 
                 // AI Mockup Lifestyle Placement Prompt Module
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1588,7 +1656,7 @@ fun PodStudioDesktopWorkspace(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                        Text("AI Mockup Background Generator", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4B5563))
+                        Text("AI Mockup Background Generator", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                     }
 
                     OutlinedTextField(
@@ -1597,13 +1665,15 @@ fun PodStudioDesktopWorkspace(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("ai_prompt_input"),
-                        textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = textPrimary),
                         maxLines = 3,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color(0xFFF9FAFB),
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
                             focusedBorderColor = Color(0xFF2563EB),
-                            unfocusedBorderColor = Color(0xFFD1D5DB)
+                            unfocusedBorderColor = inputBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary
                         ),
                         shape = RoundedCornerShape(8.dp)
                     )
@@ -1622,7 +1692,10 @@ fun PodStudioDesktopWorkspace(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("queue_mockup_btn"),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27272A)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFF27272A)
+                        ),
+                        border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFF3F3F46)),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(vertical = 10.dp)
                     ) {
@@ -1641,16 +1714,17 @@ fun PodStudioDesktopWorkspace(
                         Text(
                             text = status,
                             fontSize = 10.sp,
-                            color = Color(0xFF92400E),
+                            color = if (isDarkTheme) Color(0xFFFDE68A) else Color(0xFF92400E),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFFFEF3C7), RoundedCornerShape(4.dp))
+                                .background(if (isDarkTheme) Color(0xFF451A03) else Color(0xFFFEF3C7), RoundedCornerShape(4.dp))
+                                .border(1.dp, if (isDarkTheme) Color(0xFF78350F) else Color(0xFFFDE68A), RoundedCornerShape(4.dp))
                                 .padding(6.dp)
                         )
                     }
                 }
 
-                Divider(color = Color(0xFFE5E7EB))
+                HorizontalDivider(color = dividerColor)
 
                 // Live Developer Payload Debugger Window
                 Column(
@@ -1658,19 +1732,25 @@ fun PodStudioDesktopWorkspace(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Code, contentDescription = null, tint = Color(0xFF374151), modifier = Modifier.size(16.dp))
-                        Text("Live Developer Payload Debugger", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4B5563))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.Code, contentDescription = null, tint = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFF374151), modifier = Modifier.size(16.dp))
+                            Text("Live Developer Payload Debugger", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textPrimary)
+                        }
                     }
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
-                            .background(Color(0xFF171717), RoundedCornerShape(8.dp))
-                            .border(1.dp, Color(0xFF262626), RoundedCornerShape(8.dp))
+                            .background(codeBoxBg, RoundedCornerShape(8.dp))
+                            .border(1.dp, codeBoxBorder, RoundedCornerShape(8.dp))
                             .padding(10.dp)
                             .verticalScroll(rememberScrollState())
                             .testTag("payload_debugger_box")
@@ -1692,16 +1772,25 @@ fun PodStudioDesktopWorkspace(
     if (showAddLayerDialog) {
         AlertDialog(
             onDismissRequest = { showAddLayerDialog = false },
-            title = { Text("Add Custom Vector Layer", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color.White,
+            title = { Text("Add Custom Vector Layer", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = textPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Enter typographic text or brand graphic name:", fontSize = 12.sp, color = Color(0xFF4B5563))
+                    Text("Enter typographic text or brand graphic name:", fontSize = 12.sp, color = textSecondary)
                     OutlinedTextField(
                         value = newLayerText,
                         onValueChange = { newLayerText = it },
-                        placeholder = { Text("e.g. OVERTHINKING", fontSize = 12.sp) },
+                        placeholder = { Text("e.g. OVERTHINKING", fontSize = 12.sp, color = textMuted) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary,
+                            focusedBorderColor = Color(0xFF2563EB),
+                            unfocusedBorderColor = inputBorder
+                        )
                     )
                 }
             },
@@ -1712,16 +1801,18 @@ fun PodStudioDesktopWorkspace(
                         webViewRef?.evaluateJavascript("window.addCustomText('$textToAdd');", null)
                         newLayerText = ""
                         showAddLayerDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
                 ) {
                     Text("Add to Canvas")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddLayerDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = textSecondary)
                 }
             }
         )
     }
+}
 }
