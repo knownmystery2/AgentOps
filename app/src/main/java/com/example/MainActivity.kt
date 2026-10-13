@@ -43,7 +43,6 @@ enum class ScreenTab(val title: String, val icon: androidx.compose.ui.graphics.v
     OVERSEER("Overseer", Icons.Default.Shield),
     APPROVALS("Approvals", Icons.Default.PendingActions),
     POD("POD Studio", Icons.Default.Palette),
-    DROPSHIP("Dropship", Icons.Default.Inventory2),
     LEDGER("Ledger", Icons.Default.AccountBalance),
     STANDBY("Standby", Icons.Default.CloudSync),
     SYSTEM("System", Icons.Default.Dns),
@@ -99,13 +98,9 @@ fun AgentOpsMainApp(viewModel: MainViewModel) {
                     viewModel = viewModel,
                     onNavigateToMockupStudio = { currentTab = ScreenTab.POD }
                 )
-                ScreenTab.POD -> PodMockupScreen(
+                ScreenTab.POD -> PodStudioDesktopWorkspace(
                     viewModel = viewModel,
                     onNavigateBack = { currentTab = ScreenTab.CONSOLE }
-                )
-                ScreenTab.DROPSHIP -> DropshipScreen(
-                    viewModel = viewModel,
-                    onNavigateToApprovals = { currentTab = ScreenTab.APPROVALS }
                 )
                 ScreenTab.LEDGER -> LedgerScreen(
                     viewModel = viewModel

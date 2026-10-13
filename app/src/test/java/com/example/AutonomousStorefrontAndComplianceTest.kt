@@ -33,7 +33,7 @@ class AutonomousStorefrontAndComplianceTest {
     @Test
     fun testAppLabel() {
         val appName = context.getString(R.string.app_name)
-        assertEquals("AgentOps", appName)
+        assertEquals("Print Defy", appName)
     }
 
     @Test

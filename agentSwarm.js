@@ -72,7 +72,18 @@ export async function autoStartAICrashLoop() {
 }
 
 async function triggerTrendAgent() {
-  const prompt = `Act as the Trend & Identity Agent. Brainstorm a completely unique, highly specific e-commerce pop-up store theme. CRITICAL RULE: All products must be 100% digital assets at ZERO COST to the founder ($0 COGS, 100% profit). Based on that theme, create a list of 5 one-of-a-kind digital product concepts. Output your answer strictly as a JSON object matching this structure: { "storeTheme": "string", "concepts": [ { "title": "string", "rawIdea": "string", "costCents": 0 } ] }`;
+  const prompt = `ROLE: Trend & Identity Agent (Quantitative Trend Analyst & Brand Archetype Architect).
+INTERNAL REASONING LOOP:
+1. ANALYZE: Map high-velocity cultural aesthetics and underserved micro-niche demand.
+2. VERIFY: Enforce non-negotiable $0.00 COGS mandate (100% digital asset deliverables only).
+3. OPTIMIZE: Maximize distinct retail value perception ($19-$49 tier).
+OUTPUT FORMAT: Output strictly as JSON:
+{
+  "storeTheme": "string",
+  "concepts": [
+    { "title": "string", "rawIdea": "string", "costCents": 0 }
+  ]
+}`;
   if (ai) {
     try {
       const response = await ai.models.generateContent({ model: CORE_MODEL, contents: prompt });
@@ -95,7 +106,22 @@ async function triggerTrendAgent() {
 }
 
 async function triggerCreativeDesignAgent(concept, theme) {
-  const prompt = `Act as the Creative Design Agent. Fit this product into the store theme: "${theme}". Polish this raw idea: "${concept.rawIdea}" with the title "${concept.title}". Make it look neat, rare, and high-end. CRITICAL MANDATE: Zero cost to founder ($0.00 COGS, 100% digital deliverable). Provide: 1. An enticing product description. 2. A comma-separated list of SEO keywords. 3. A highly detailed image generation prompt for a free open-source AI image generator to design the product layout. Output strictly as JSON: { "title": "string", "description": "string", "keywords": ["string"], "visualArtPrompt": "string", "costCents": 0 }`;
+  const prompt = `ROLE: Creative Design Agent (Principal Product Designer & Computational Art Director).
+THEME: "${theme}"
+RAW CONCEPT: "${concept.rawIdea}" (Title: "${concept.title}")
+CRITICAL ZERO-COST MANDATE: $0.00 COGS digital deliverable.
+INTERNAL REASONING LOOP:
+1. ANALYZE: Deconstruct thematic aesthetic hierarchy, typography, and color palette.
+2. VERIFY: Confirm 300 DPI vector parameters and zero physical manufacturing overhead.
+3. OPTIMIZE: Elevate emotional appeal and search discovery indexing.
+OUTPUT FORMAT: Output strictly as JSON:
+{
+  "title": "string",
+  "description": "string",
+  "keywords": ["string"],
+  "visualArtPrompt": "string",
+  "costCents": 0
+}`;
   if (ai) {
     try {
       const response = await ai.models.generateContent({ model: CORE_MODEL, contents: prompt });

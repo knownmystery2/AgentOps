@@ -57,24 +57,6 @@ data class LedgerEntity(
     val category: String // SALE, COGS, FEE, REFUND
 )
 
-// Zero Upfront Cost Dropshipping Sourcing Shortlist
-@Entity(tableName = "dropship_catalog")
-data class DropshipEntity(
-    @PrimaryKey val id: String,
-    val title: String,
-    val niche: String,
-    val supplierName: String,
-    val supplierUrl: String,
-    val costCents: Long,
-    val retailPriceCents: Long,
-    val feeCents: Long,
-    val profitCents: Long,
-    val shippingDays: String,
-    val supplierRating: Float,
-    val zeroUpfrontCost: Boolean = true,
-    val inShortlist: Boolean = true
-)
-
 // Top Admin Phone Verification Tasks (SMS 2FA, W-9/1099, CAPTCHA)
 @Entity(tableName = "account_tasks")
 data class AccountTaskEntity(
@@ -285,4 +267,22 @@ data class GodInstallDiagnostic(
     val isZeroTrustEnclaveArmed: Boolean = true,
     val totalInterceptCount: Int = 0,
     val statusSummary: String = "God Sentinel: 100% Fully Installed & Armed"
+)
+
+enum class LayerType { TEXT, IMAGE }
+
+data class DesignLayer(
+    val id: String,
+    val type: LayerType,
+    val name: String,
+    val x: Float,
+    val y: Float,
+    val scale: Float,
+    val rotation: Float,
+    val region: String = "Front Side",
+    val colorHex: String = "#FFFFFF",
+    val opacity: Float = 1.0f,
+    val isVisible: Boolean = true,
+    val fontStyle: String = "SANS_SERIF",
+    val graphicPreset: String = "retro_mountain"
 )

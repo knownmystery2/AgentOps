@@ -46,7 +46,6 @@ fun ApprovalsScreen(
 
     val filteredDecisions = when (selectedFilter) {
         "POD" -> decisions.filter { it.agentSource.contains("POD") || it.description.contains("Tee") || it.description.contains("Hoodie") }
-        "DROPSHIP" -> decisions.filter { it.agentSource.contains("Dropship") || it.description.contains("Shortlist") }
         "SUPPORT" -> decisions.filter { it.agentSource.contains("Customer") || it.description.contains("Refund") }
         else -> decisions
     }
@@ -94,12 +93,6 @@ fun ApprovalsScreen(
                         onClick = { selectedFilter = "POD" },
                         label = { Text("POD") },
                         modifier = Modifier.testTag("filter_pod_chip")
-                    )
-                    FilterChip(
-                        selected = selectedFilter == "DROPSHIP",
-                        onClick = { selectedFilter = "DROPSHIP" },
-                        label = { Text("Dropship") },
-                        modifier = Modifier.testTag("filter_dropship_chip")
                     )
                     FilterChip(
                         selected = selectedFilter == "SUPPORT",

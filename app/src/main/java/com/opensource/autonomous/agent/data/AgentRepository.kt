@@ -64,13 +64,6 @@ class AgentRepository(
         return liveApiClient.fetchLiveLedger(baseUrl)
     }
 
-    suspend fun syncDropshipSuppliers(baseUrl: String): Result<List<DropshipEntity>> {
-        return liveApiClient.syncDropshipSuppliers(baseUrl)
-    }
-
-    suspend fun postDropshipOrder(baseUrl: String, dropshipId: String): Result<Boolean> {
-        return liveApiClient.postDropshipOrder(baseUrl, dropshipId)
-    }
 
     suspend fun fetchPodQueue(baseUrl: String): Result<List<PodJobItem>> {
         return liveApiClient.fetchPodQueue(baseUrl)
@@ -111,7 +104,6 @@ class AgentRepository(
     fun getAllDecisions(): Flow<List<DecisionEntity>> = db.decisionDao().getAllDecisions()
     fun getAllLogs(): Flow<List<LogEntity>> = db.logDao().getAllLogs()
     fun getLedgerEntries(): Flow<List<LedgerEntity>> = db.ledgerDao().getAllEntries()
-    fun getDropshipItems(): Flow<List<DropshipEntity>> = db.dropshipDao().getAllItems()
     fun getAccountTasks(): Flow<List<AccountTaskEntity>> = db.accountTaskDao().getAllTasks()
     fun getProviders(): Flow<List<StandbyProviderEntity>> = db.providerDao().getAllProviders()
     fun getSettings(): Flow<SettingsEntity?> = db.settingsDao().getSettings()
@@ -201,9 +193,6 @@ class AgentRepository(
         db.accountTaskDao().updateTaskStatus(id, completed)
     }
 
-    suspend fun updateDropshipShortlist(id: String, inShortlist: Boolean) = withContext(Dispatchers.IO) {
-        db.dropshipDao().updateShortlistStatus(id, inShortlist)
-    }
 
     suspend fun saveSettings(settings: SettingsEntity) = withContext(Dispatchers.IO) {
         db.settingsDao().saveSettings(settings)

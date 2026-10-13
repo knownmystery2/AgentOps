@@ -9,14 +9,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(
+        @Database(
     entities = [
         AgentEntity::class,
         TaskEntity::class,
         DecisionEntity::class,
         LogEntity::class,
         LedgerEntity::class,
-        DropshipEntity::class,
         AccountTaskEntity::class,
         StandbyProviderEntity::class,
         SettingsEntity::class,
@@ -27,7 +26,7 @@ import kotlinx.coroutines.launch
         DigitalProductEntity::class,
         GodAuditVerdictEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,7 +35,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun decisionDao(): DecisionDao
     abstract fun logDao(): LogDao
     abstract fun ledgerDao(): LedgerDao
-    abstract fun dropshipDao(): DropshipDao
     abstract fun accountTaskDao(): AccountTaskDao
     abstract fun providerDao(): ProviderDao
     abstract fun settingsDao(): SettingsDao
@@ -123,7 +121,6 @@ abstract class AppDatabase : RoomDatabase() {
                 AgentEntity("3", "Brand Agent", "Identity & Voice Architecture", "ROLE: Brand Identity Architect. You establish brand tone and visual style guidelines.", isActive = true),
                 AgentEntity("4", "Creative Design Agent", "Design & Visual Prompt Formulation", AgentPrompts.CREATIVE_DESIGN_SYSTEM_PROMPT, isActive = true),
                 AgentEntity("5", "Listing & SEO Agent", "E-Commerce Copywriter & Metadata", AgentPrompts.CONTENT_PROMPT, isActive = true),
-                AgentEntity("6", "Dropship Sourcing Agent", "Procurement & Zero-Capital Sourcing", "ROLE: Dropship Sourcing Agent. You find verified suppliers with guaranteed ZERO upfront cost.", isActive = true),
                 AgentEntity("7", "Marketing Agent", "Organic Growth & Content Campaigns", AgentPrompts.MARKETING_PROMPT, isActive = true),
                 AgentEntity("8", "Customer Service Agent", "Support & Inquiries", AgentPrompts.SUPPORT_PROMPT, isActive = true),
                 AgentEntity("9", "Finance Agent", "Double-Entry Ledger & Compliance", AgentPrompts.FINANCE_PROMPT, isActive = true),
@@ -190,7 +187,7 @@ abstract class AppDatabase : RoomDatabase() {
             db.logDao().insertLog(
                 LogEntity(
                     agentId = "1",
-                    message = "Multi-Agent Swarm Cluster initialized. 11 Agents Online. Zero demo data. Live operating environment ready.",
+                    message = "Multi-Agent Swarm Cluster initialized. 10 Agents Online. Zero demo data. Live operating environment ready.",
                     timestamp = now
                 )
             )
@@ -203,7 +200,6 @@ abstract class AppDatabase : RoomDatabase() {
             db.taskDao().clearTasks()
             db.decisionDao().clearDecisions()
             db.ledgerDao().clearLedger()
-            db.dropshipDao().clearDropship()
             db.accountTaskDao().clearTasks()
             db.storefrontDao().clearStorefronts()
             db.trademarkDao().clearChecks()

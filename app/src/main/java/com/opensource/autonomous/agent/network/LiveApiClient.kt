@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.opensource.autonomous.agent.data.DecisionEntity
-import com.opensource.autonomous.agent.data.DropshipEntity
 import com.opensource.autonomous.agent.data.LedgerEntity
 import com.opensource.autonomous.agent.data.LogEntity
 import com.opensource.autonomous.agent.data.TaskEntity
@@ -263,46 +262,6 @@ class LiveApiClient {
         }
     }
 
-    suspend fun syncDropshipSuppliers(baseUrl: String): Result<List<DropshipEntity>> = withContext(Dispatchers.IO) {
-        try {
-            val resolved = resolveActiveBaseUrl(baseUrl)
-            val url = "$resolved/api/dropship/suppliers"
-            val request = Request.Builder().url(url).get().build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    Result.failure(Exception("HTTP ${response.code}"))
-                } else {
-                    val body = response.body?.string() ?: "[]"
-                    val type = object : TypeToken<List<DropshipEntity>>() {}.type
-                    val list: List<DropshipEntity> = gson.fromJson(body, type)
-                    Result.success(list)
-                }
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun postDropshipOrder(baseUrl: String, dropshipId: String): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            val resolved = resolveActiveBaseUrl(baseUrl)
-            val url = "$resolved/api/dropship/order"
-            val payload = JsonObject().apply {
-                addProperty("dropshipId", dropshipId)
-                addProperty("timestamp", System.currentTimeMillis())
-            }
-            val request = Request.Builder()
-                .url(url)
-                .post(gson.toJson(payload).toRequestBody(jsonMediaType))
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                Result.success(response.isSuccessful)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
 
     suspend fun fetchPodQueue(baseUrl: String): Result<List<PodJobItem>> = withContext(Dispatchers.IO) {
         try {

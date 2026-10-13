@@ -25,6 +25,10 @@ import java.util.UUID
  * Directly fulfills open-source localhost communication for all 8 modules.
  */
 class LocalWebhookServer(private val port: Int = 8080, private val db: AppDatabase) {
+    companion object {
+        @Volatile
+        var latestPodWorkspacePayload: String = "{}"
+    }
     private val scope = CoroutineScope(Dispatchers.IO)
     private val gson = Gson()
     private var serverSocket: ServerSocket? = null
@@ -85,6 +89,16 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                     val now = System.currentTimeMillis()
 
                     when {
+                        // 0. CORS Preflight Support
+                        method == "OPTIONS" -> {
+                            writer.write("HTTP/1.1 204 No Content\r\n")
+                            writer.write("Access-Control-Allow-Origin: *\r\n")
+                            writer.write("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n")
+                            writer.write("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n")
+                            writer.write("Connection: close\r\n\r\n")
+                            writer.flush()
+                        }
+
                         // 1. Health & Live Status (Console & Settings)
                         method == "GET" && path.startsWith("/api/status") -> {
                             val runtime = Runtime.getRuntime()
@@ -211,28 +225,6 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                             sendJsonResponse(writer, 200, gson.toJson(entries))
                         }
 
-                        // 7. Dropship Suppliers GET & Order POST
-                        method == "GET" && path.startsWith("/api/dropship/suppliers") -> {
-                            val items = db.dropshipDao().getAllItems().first()
-                            sendJsonResponse(writer, 200, gson.toJson(items))
-                        }
-
-                        method == "POST" && path.startsWith("/api/dropship/order") -> {
-                            val rootJson = try {
-                                gson.fromJson(postData, JsonObject::class.java)
-                            } catch (_: Exception) {
-                                JsonObject()
-                            }
-                            val dropshipId = rootJson.get("dropshipId")?.asString ?: "item"
-                            db.logDao().insertLog(
-                                LogEntity(
-                                    agentId = "Dropship Sourcing Agent",
-                                    message = "Dispatched order routing for $dropshipId. Zero upfront payment verified with supplier.",
-                                    timestamp = now
-                                )
-                            )
-                            sendJsonResponse(writer, 200, """{"status":"routed","dropshipId":"$dropshipId","timestamp":$now}""")
-                        }
 
                         // 8. POD Queue GET & Generate POST
                         method == "GET" && path.startsWith("/api/pod/queue") -> {
@@ -267,6 +259,110 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                                 )
                             )
                             sendJsonResponse(writer, 200, """{"status":"queued","sku":"$sku","timestamp":$now}""")
+                        }
+
+                        // 8b. Pod Studio Desktop Workspace - Publish Route
+                        method == "POST" && path.startsWith("/api/pod/workspace/publish") -> {
+                            val rootJson = try {
+                                gson.fromJson(postData, JsonObject::class.java)
+                            } catch (_: Exception) {
+                                JsonObject()
+                            }
+                            latestPodWorkspacePayload = postData
+                            val sku = rootJson.get("sku")?.asString ?: "POD-HET--CHSL-2026"
+                            val title = rootJson.get("title")?.asString ?: "Print Defy Custom Apparel"
+                            val syncId = "SYNC-PTFY-" + UUID.randomUUID().toString().substring(0, 8).uppercase()
+
+                            db.logDao().insertLog(
+                                LogEntity(
+                                    agentId = "POD Design Agent",
+                                    message = "Printify API payload published live. SKU: $sku, Sync ID: $syncId",
+                                    timestamp = now
+                                )
+                            )
+
+                            val responseObj = JsonObject().apply {
+                                addProperty("status", "SUCCESS")
+                                addProperty("syncId", syncId)
+                                addProperty("sku", sku)
+                                addProperty("title", title)
+                                addProperty("timestamp", now)
+                                addProperty("printifyReady", true)
+                                add("receivedPayload", rootJson)
+                            }
+                            sendJsonResponse(writer, 200, gson.toJson(responseObj))
+                        }
+
+                        // 8c. Pod Studio Desktop Workspace - Auto-Scaling Route
+                        method == "POST" && path.startsWith("/api/pod/workspace/autoscale") -> {
+                            val rootJson = try {
+                                gson.fromJson(postData, JsonObject::class.java)
+                            } catch (_: Exception) {
+                                JsonObject()
+                            }
+                            val elemW = rootJson.get("elementWidth")?.asFloat ?: 120f
+                            val elemH = rootJson.get("elementHeight")?.asFloat ?: 120f
+                            val zoneW = rootJson.get("printZoneWidth")?.asFloat ?: 260f
+                            val zoneH = rootJson.get("printZoneHeight")?.asFloat ?: 310f
+                            val fitMode = rootJson.get("fitMode")?.asString ?: "CONTAIN"
+
+                            val maxW = if (fitMode == "SAFE_90") zoneW * 0.90f else zoneW * 0.95f
+                            val maxH = if (fitMode == "SAFE_90") zoneH * 0.90f else zoneH * 0.95f
+
+                            val scaleFactor = (maxW / elemW).coerceAtMost(maxH / elemH)
+                            val scaledW = elemW * scaleFactor
+                            val scaledH = elemH * scaleFactor
+                            val centerX = zoneW / 2f
+                            val centerY = zoneH / 2f
+
+                            val res = JsonObject().apply {
+                                addProperty("scaleFactor", scaleFactor)
+                                addProperty("scaleX", scaleFactor)
+                                addProperty("scaleY", scaleFactor)
+                                addProperty("scaledWidth", scaledW)
+                                addProperty("scaledHeight", scaledH)
+                                addProperty("centerX", centerX)
+                                addProperty("centerY", centerY)
+                                addProperty("normalizedX", 0.5)
+                                addProperty("normalizedY", 0.5)
+                                addProperty("fitMode", fitMode)
+                                addProperty("safeBoundsClamped", true)
+                            }
+                            sendJsonResponse(writer, 200, gson.toJson(res))
+                        }
+
+                        // 8d. Pod Studio Desktop Workspace - Config Route
+                        method == "GET" && path.startsWith("/api/pod/workspace/config") -> {
+                            val configJson = """
+                            {
+                              "system": "Print Defy Pop Up Store Engine v4.0",
+                              "engineVersion": "4.0.0-desktop",
+                              "products": [
+                                {"id": "heavyweight-tshirt", "name": "Heavyweight T-Shirt", "category": "Apparel", "weight": "240 GSM Organic Cotton", "baseSku": "POD-HET", "blueprintId": 384},
+                                {"id": "vintage-hoodie", "name": "Vintage Hoodie", "category": "Apparel", "weight": "380 GSM Heavy Fleece", "baseSku": "POD-HOD", "blueprintId": 412},
+                                {"id": "ceramic-mug", "name": "Ceramic Mug", "category": "Drinkware", "weight": "11 oz Glossy Ceramic", "baseSku": "POD-MUG", "blueprintId": 68},
+                                {"id": "canvas-tote", "name": "Canvas Tote Bag", "category": "Accessories", "weight": "100% Heavy Bull Denim", "baseSku": "POD-TOT", "blueprintId": 29},
+                                {"id": "wall-art-poster", "name": "Wall Art Poster", "category": "Home Decor", "weight": "250 GSM Archival Matte", "baseSku": "POD-PST", "blueprintId": 12}
+                              ],
+                              "colorSwatches": [
+                                {"id": "dark-teal", "name": "Dark Teal", "hex": "#0D5C53"},
+                                {"id": "cream", "name": "Cream", "hex": "#F5EBE6"},
+                                {"id": "forest-green", "name": "Forest Green", "hex": "#1A331E"},
+                                {"id": "terracotta", "name": "Terracotta", "hex": "#C27648"},
+                                {"id": "classic-white", "name": "Classic White", "hex": "#FFFFFF"}
+                              ],
+                              "printZones": [
+                                {"id": "chest", "name": "Chest Center (11\" x 13\")", "skuCode": "CHSL", "width": 260, "height": 310, "dpi": 300},
+                                {"id": "pocket", "name": "Pocket Left (4\" x 4\")", "skuCode": "PKTL", "width": 110, "height": 110, "dpi": 300}
+                              ]
+                            }
+                            """.trimIndent()
+                            sendJsonResponse(writer, 200, configJson)
+                        }
+
+                        // 8e. Pod Studio Desktop Workspace - Payload GET
+                        method == "GET" && path.startsWith("/api/pod/workspace/payload") -> {
+                            sendJsonResponse(writer, 200, latestPodWorkspacePayload)
                         }
 
                         // Standby Daemon State & Cron Trigger

@@ -94,21 +94,6 @@ interface LedgerDao {
 }
 
 @Dao
-interface DropshipDao {
-    @Query("SELECT * FROM dropship_catalog ORDER BY inShortlist DESC, costCents ASC")
-    fun getAllItems(): Flow<List<DropshipEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertItems(items: List<DropshipEntity>)
-
-    @Query("UPDATE dropship_catalog SET inShortlist = :inShortlist WHERE id = :id")
-    suspend fun updateShortlistStatus(id: String, inShortlist: Boolean)
-
-    @Query("DELETE FROM dropship_catalog")
-    suspend fun clearDropship()
-}
-
-@Dao
 interface AccountTaskDao {
     @Query("SELECT * FROM account_tasks ORDER BY isCompleted ASC, priority DESC")
     fun getAllTasks(): Flow<List<AccountTaskEntity>>

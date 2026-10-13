@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "AgentOps"
+rootProject.name = "Print Defy"
 
 include(":app")

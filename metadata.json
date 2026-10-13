@@ -1,6 +1,6 @@
 {
-  "name": "AgentOps",
-  "description": "Print Defy Pop Up Store management system for inventory, payments, and product placements.",
+  "name": "Print Defy",
+  "description": "Print Defy Print-on-Demand Studio and autonomous e-commerce management system.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

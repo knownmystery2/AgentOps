@@ -773,8 +773,7 @@ fun DashboardScreen(
         // Executive Operations Summary
         item {
             val podPending = decisions.count { it.agentSource.contains("POD") || it.description.contains("Tee") || it.description.contains("Hoodie") }
-            val dsPending = decisions.count { it.agentSource.contains("Dropship") || it.description.contains("Shortlist") }
-            val otherPending = (decisions.size - podPending - dsPending).coerceAtLeast(0)
+            val otherPending = (decisions.size - podPending).coerceAtLeast(0)
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -800,7 +799,7 @@ fun DashboardScreen(
                         icon = Icons.Default.HourglassTop,
                         iconColor = MaterialTheme.colorScheme.tertiary,
                         label = "What is Pending",
-                        desc = "$pendingDecisionsCount items awaiting human authorization ($podPending POD, $dsPending dropship, $otherPending operations)."
+                        desc = "$pendingDecisionsCount items awaiting human authorization ($podPending POD, $otherPending operations)."
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     BriefingBullet(

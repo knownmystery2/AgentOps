@@ -53,7 +53,13 @@ class ApprovalRegisterAndSystemUiTest {
 
         approvalRegisterViewModel.createPendingAction(proposal)
 
-        val pending = database.decisionDao().getPendingDecisions().first()
+        var pending = database.decisionDao().getPendingDecisions().first()
+        var attempts = 0
+        while (!pending.any { it.description.contains("Deploy Print-on-Demand Hoodie SKU") } && attempts < 30) {
+            kotlinx.coroutines.delay(50)
+            pending = database.decisionDao().getPendingDecisions().first()
+            attempts++
+        }
         assertTrue("Pending decisions should contain created action", pending.any { it.description.contains("Deploy Print-on-Demand Hoodie SKU") })
 
         val decision = pending.first { it.description.contains("Deploy Print-on-Demand Hoodie SKU") }
@@ -76,7 +82,13 @@ class ApprovalRegisterAndSystemUiTest {
         approvalRegisterViewModel.confirmAction(decision.id, "Approved by Founder for immediate deployment")
 
         // Wait/poll reactive update
-        val updatedDecision = database.decisionDao().getAllDecisions().first().first { it.id == decision.id }
+        var updatedDecision = database.decisionDao().getAllDecisions().first().first { it.id == decision.id }
+        var attempts = 0
+        while (updatedDecision.status != "APPROVED" && attempts < 30) {
+            kotlinx.coroutines.delay(50)
+            updatedDecision = database.decisionDao().getAllDecisions().first().first { it.id == decision.id }
+            attempts++
+        }
         assertEquals("APPROVED", updatedDecision.status)
 
         // Verify execution task in Room
@@ -101,7 +113,13 @@ class ApprovalRegisterAndSystemUiTest {
 
         approvalRegisterViewModel.rejectAction(decision.id, "Violates zero upfront cost mandate")
 
-        val updatedDecision = database.decisionDao().getAllDecisions().first().first { it.id == decision.id }
+        var updatedDecision = database.decisionDao().getAllDecisions().first().first { it.id == decision.id }
+        var attempts = 0
+        while (updatedDecision.status != "REJECTED" && attempts < 30) {
+            kotlinx.coroutines.delay(50)
+            updatedDecision = database.decisionDao().getAllDecisions().first().first { it.id == decision.id }
+            attempts++
+        }
         assertEquals("REJECTED", updatedDecision.status)
 
         val logs = database.logDao().getAllLogs().first()
@@ -119,7 +137,13 @@ class ApprovalRegisterAndSystemUiTest {
         approvalRegisterViewModel.batchConfirm(listOf("BATCH-1", "BATCH-2"))
         approvalRegisterViewModel.batchReject(listOf("BATCH-3"))
 
-        val all = database.decisionDao().getAllDecisions().first()
+        var all = database.decisionDao().getAllDecisions().first()
+        var batchAttempts = 0
+        while ((all.first { it.id == "BATCH-1" }.status != "APPROVED" || all.first { it.id == "BATCH-3" }.status != "REJECTED") && batchAttempts < 30) {
+            kotlinx.coroutines.delay(50)
+            all = database.decisionDao().getAllDecisions().first()
+            batchAttempts++
+        }
         assertEquals("APPROVED", all.first { it.id == "BATCH-1" }.status)
         assertEquals("APPROVED", all.first { it.id == "BATCH-2" }.status)
         assertEquals("REJECTED", all.first { it.id == "BATCH-3" }.status)
