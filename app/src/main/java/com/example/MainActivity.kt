@@ -72,8 +72,7 @@ fun AgentOpsMainApp(viewModel: MainViewModel) {
                         selected = currentTab == tab,
                         onClick = { currentTab = tab },
                         icon = { Icon(tab.icon, contentDescription = tab.title) },
-                        label = { Text(tab.title, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
-                        alwaysShowLabel = false,
+                        label = { Text(tab.title, style = MaterialTheme.typography.labelSmall) },
                         modifier = Modifier.testTag("nav_tab_${tab.name.lowercase()}")
                     )
                 }
