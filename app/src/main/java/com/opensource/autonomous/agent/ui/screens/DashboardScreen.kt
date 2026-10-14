@@ -1444,6 +1444,34 @@ fun DashboardScreen(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.buildAllThreeSuggestions() },
+                            enabled = !isProcessingBusinessPrompt,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            modifier = Modifier.weight(1f).testTag("build_all_three_suggestions_btn")
+                        ) {
+                            Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Create All 3 Suggestions", fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+                        }
+
+                        Button(
+                            onClick = { viewModel.buildAllSixSuggestions() },
+                            enabled = !isProcessingBusinessPrompt,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            modifier = Modifier.weight(1.2f).testTag("build_all_six_suggestions_btn")
+                        ) {
+                            Icon(Icons.Default.RocketLaunch, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Build 3 + Next 3 (All 6)", fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
+
                     // Display Generated Analysis & Task Suggestions
                     if (businessAnalysis != null) {
                         val analysis = businessAnalysis!!
@@ -1500,11 +1528,25 @@ fun DashboardScreen(
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Generated Task Suggestions (${analysis.taskSuggestions.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Generated Task Suggestions (${analysis.taskSuggestions.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            FilledTonalButton(
+                                onClick = { viewModel.enqueueAllSuggestions() },
+                                modifier = Modifier.testTag("enqueue_all_suggestions_btn")
+                            ) {
+                                Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Execute All Suggestions", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
 
                         analysis.taskSuggestions.forEach { suggestion ->

@@ -114,9 +114,15 @@ class AgentRepository(
     fun getPublishedDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getPublishedProducts()
     fun getPendingDigitalProducts(): Flow<List<DigitalProductEntity>> = db.digitalProductDao().getProductsByStatus("AWAITING_HUMAN_APPROVAL")
     fun getAllPodOrders(): Flow<List<PodOrderEntity>> = db.podOrderDao().getAllOrders()
+    fun getActivePodOrders(): Flow<List<PodOrderEntity>> = db.podOrderDao().getActiveOrders()
+    fun getLedgerBalance(): Flow<Long> = db.ledgerDao().getLedgerBalance()
 
     suspend fun insertPodOrder(order: PodOrderEntity) = withContext(Dispatchers.IO) {
         db.podOrderDao().insertOrder(order)
+    }
+
+    suspend fun insertPodOrderWithLedger(order: PodOrderEntity, entry: LedgerEntity) = withContext(Dispatchers.IO) {
+        db.podOrderDao().insertOrderWithLedger(order, entry)
     }
 
     suspend fun updatePodOrderStatus(id: String, status: String, progress: Int) = withContext(Dispatchers.IO) {

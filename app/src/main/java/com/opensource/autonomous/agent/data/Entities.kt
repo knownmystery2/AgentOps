@@ -258,6 +258,8 @@ data class DigitalProductEntity(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+typealias PodOrder = PodOrderEntity
+typealias LedgerEntry = LedgerEntity
 typealias DigitalProduct = DigitalProductEntity
 
 // Interceptor Architecture ("God" Overseer) Verdict Entity

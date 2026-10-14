@@ -222,9 +222,12 @@ open class MainViewModel(
     val isGeneratingPod = MutableStateFlow(false)
     val podQueue = MutableStateFlow<List<PodJobItem>>(emptyList())
 
+
+
     // Printify Live Integration States
     val printifyConnectionStatus = MutableStateFlow<String?>("Connected: kriticallimitz.printify.me (Shop ID: 26650832)")
     val isTestingPrintify = MutableStateFlow(false)
+
 
     // Module 7: Standby Daemon State
     val daemonState = MutableStateFlow("ACTIVE") // ACTIVE, STANDBY, SLEEP
@@ -247,17 +250,6 @@ open class MainViewModel(
         viewModelScope.launch {
             delay(1000)
             adminRunner.onAppStart(autoTriggerCycle = true)
-        }
-
-        // Auto-seed initial real-world settled ledger transactions if the database is newly created
-        viewModelScope.launch {
-            delay(1500)
-            if (ledgerEntries.value.isEmpty()) {
-                recordManualSale("Print Defy Pop-Up", "Printify Live", 2800L, 950L, 168L, "Heavyweight Organic Tee (Forest Green) - Order #ORD-8821")
-                recordManualSale("Print Defy Pop-Up", "Printify Live", 4800L, 1850L, 288L, "Vintage Heavy Fleece Hoodie (Terracotta) - Order #ORD-8820")
-                recordManualSale("Print Defy Pop-Up", "Printify Live", 1600L, 520L, 96L, "Ceramic Glossy Mug (Dark Teal) - Order #ORD-8819")
-                recordManualSale("Print Defy Pop-Up", "Printify Live", 2200L, 780L, 132L, "Canvas Tote Bag (Bull Denim) - Order #ORD-8818")
-            }
         }
 
         // Real-time security halt notification observer
@@ -607,69 +599,6 @@ open class MainViewModel(
                 LogEntity(
                     agentId = "Finance Agent",
                     message = "New sale entered into double-entry ledger. Gross: $${grossCents / 100.0}, Net: $${(grossCents - cogsCents - feeCents) / 100.0}.",
-                    timestamp = now
-                )
-            )
-        }
-    }
-
-    fun placeCustomerPodOrder(
-        productName: String = "Heavyweight T-Shirt",
-        color: String = "Dark Teal",
-        placement: String = "Chest Center (11\" x 13\")",
-        grossPriceCents: Long = 2800L,
-        supplierCostCents: Long = 1050L,
-        platformFeeCents: Long = 182L
-    ) {
-        viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val orderNum = (1000 + (now % 9000)).toInt()
-            val orderId = "ORD-$orderNum"
-            val prodCode = productName.split(" ").map { it.take(2).uppercase() }.joinToString("")
-            val colCode = color.split(" ").map { it.take(2).uppercase() }.joinToString("")
-            val sku = "POD-$prodCode-$colCode-2026"
-
-            val newOrder = PodJobItem(
-                id = orderId,
-                sku = sku,
-                product = productName,
-                color = color,
-                placement = placement,
-                status = "PRINTING",
-                progressPercent = 15,
-                vectorDpi = 300,
-                timestamp = now
-            )
-            podQueue.value = listOf(newOrder) + podQueue.value
-
-            val orderJson = com.google.gson.JsonObject().apply {
-                addProperty("id", orderId)
-                addProperty("orderId", orderId)
-                addProperty("sku", sku)
-                addProperty("product", productName)
-                addProperty("color", color)
-                addProperty("placement", placement)
-                addProperty("grossCents", grossPriceCents)
-                addProperty("vectorDpi", 300)
-                addProperty("status", "PRINTING")
-                addProperty("progressPercent", 15)
-                addProperty("timestamp", now)
-            }
-            com.opensource.autonomous.agent.network.LocalWebhookServer.livePodOrders.add(0, orderJson)
-
-            recordManualSale(
-                store = "Print Defy Pop-Up",
-                platform = "Stripe / Printify Live",
-                grossCents = grossPriceCents,
-                cogsCents = supplierCostCents,
-                feeCents = platformFeeCents,
-                desc = "$productName ($color) - Order #$orderId"
-            )
-
-            repository.insertLog(
-                LogEntity(
-                    agentId = "Order Ingestion Agent",
-                    message = "Customer order #$orderId ingested. Direct-to-Garment printing queued at supplier. Gross: $${String.format("%.2f", grossPriceCents / 100.0)}, COGS: $${String.format("%.2f", supplierCostCents / 100.0)}.",
                     timestamp = now
                 )
             )
@@ -1208,10 +1137,9 @@ open class MainViewModel(
         viewModelScope.launch {
             repository.clearAllDemoData()
             podQueue.value = emptyList()
-            com.opensource.autonomous.agent.network.LocalWebhookServer.livePodOrders.clear()
             marketingPackages.value = emptyMap()
             activeStoreTheme.value = "Live Operating Mode"
-            swarmStatusMessage.value = "Workspace purged. 11 Agents Active for live business."
+            swarmStatusMessage.value = "All demo data removed. 11 Agents Active for live business."
         }
     }
 
@@ -1500,6 +1428,71 @@ open class MainViewModel(
     fun clearBusinessAnalysis() {
         businessAnalysis.value = null
         businessOperationStatusMessage.value = null
+    }
+
+    fun buildAllThreeSuggestions() {
+        viewModelScope.launch {
+            isProcessingBusinessPrompt.value = true
+            businessOperationStatusMessage.value = "Formulating and deploying all 3 core business operational suggestions..."
+            try {
+                val result = businessOperationsRepo.processBusinessPrompt(
+                    "Formulate initial 3-stage autonomous pipeline: 300 DPI POD mockup generation, USPTO trademark compliance clearance, and organic social marketing."
+                )
+                val analysis = result.getOrNull()
+                if (analysis != null) {
+                    val firstThree = analysis.taskSuggestions.take(3)
+                    businessAnalysis.value = analysis.copy(taskSuggestions = firstThree)
+                    firstThree.forEach { suggestion ->
+                        businessOperationsRepo.enqueueSuggestionAsActiveTask(suggestion)
+                        businessOperationsRepo.enqueueSuggestionForHumanApproval(suggestion)
+                    }
+                    businessOperationStatusMessage.value = "Built and deployed all 3 operational suggestions into active tasks and approvals!"
+                } else {
+                    businessOperationStatusMessage.value = "Failed to build 3 suggestions."
+                }
+            } catch (e: Exception) {
+                businessOperationStatusMessage.value = "Error building 3 suggestions: ${e.message}"
+            } finally {
+                isProcessingBusinessPrompt.value = false
+            }
+        }
+    }
+
+    fun buildAllSixSuggestions() {
+        viewModelScope.launch {
+            isProcessingBusinessPrompt.value = true
+            businessOperationStatusMessage.value = "Formulating and deploying all 6 business operational suggestions..."
+            try {
+                val result = businessOperationsRepo.processBusinessPrompt(
+                    "Formulate end-to-end 6-stage autonomous e-commerce pipeline with Printify POD apparel, zero-cost digital downloads, USPTO trademark clearance, SEO listings, and double-entry ledger settlement."
+                )
+                val analysis = result.getOrNull()
+                if (analysis != null) {
+                    businessAnalysis.value = analysis
+                    analysis.taskSuggestions.forEach { suggestion ->
+                        businessOperationsRepo.enqueueSuggestionAsActiveTask(suggestion)
+                        businessOperationsRepo.enqueueSuggestionForHumanApproval(suggestion)
+                    }
+                    businessOperationStatusMessage.value = "Built and deployed all 6 operational suggestions into active tasks and approvals!"
+                } else {
+                    businessOperationStatusMessage.value = "Failed to build suggestions."
+                }
+            } catch (e: Exception) {
+                businessOperationStatusMessage.value = "Error building suggestions: ${e.message}"
+            } finally {
+                isProcessingBusinessPrompt.value = false
+            }
+        }
+    }
+
+    fun enqueueAllSuggestions() {
+        viewModelScope.launch {
+            val analysis = businessAnalysis.value ?: return@launch
+            analysis.taskSuggestions.forEach { suggestion ->
+                businessOperationsRepo.enqueueSuggestionAsActiveTask(suggestion)
+            }
+            businessOperationStatusMessage.value = "Successfully executed and enqueued all ${analysis.taskSuggestions.size} suggestions into Swarm Queue!"
+        }
     }
 
     // Printify Integration & Mockup Studio

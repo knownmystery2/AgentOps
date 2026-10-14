@@ -529,156 +529,101 @@ Respond strictly in JSON adhering to the specified schema.
         val lower = prompt.lowercase()
         val suggestions = mutableListOf<BusinessTaskSuggestion>()
 
-        when {
-            lower.contains("hoodie") || lower.contains("shirt") || lower.contains("pod") || lower.contains("printify") || lower.contains("mockup") -> {
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Generate 300 DPI Vector Placement Mockup",
-                        category = "POD_MOCKUP",
-                        assignedAgentId = "4",
-                        assignedAgentRole = "Creative Design Agent",
-                        priority = "HIGH",
-                        detailedInstruction = "Create 4500x5400 px CMYK transparent vector graphic for Heavyweight T-Shirt & Vintage Hoodie targeting niche '${context.targetNiche}'. Align to Chest Center (11\" x 13\") for Printify shop ${context.primaryShopDomain}.",
-                        estimatedMarginPercent = 48,
-                        zeroCostCompliance = true,
-                        suggestedAction = "DEPLOY_POD",
-                        targetResource = "printify/blueprints"
-                    )
-                )
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Verify USPTO Trademark & Copyright Clearance",
-                        category = "COMPLIANCE",
-                        assignedAgentId = "10",
-                        assignedAgentRole = "Legal Compliance Agent",
-                        priority = "HIGH",
-                        detailedInstruction = "Screen design typography, slogans, and graphic elements against USPTO registered marks in Class 025 (Apparel). Generate cryptographic clearance certificate.",
-                        estimatedMarginPercent = 100,
-                        zeroCostCompliance = true,
-                        suggestedAction = "AUDIT_TRADEMARK",
-                        targetResource = "legal/uspto"
-                    )
-                )
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Publish Organic Pinterest Pin & TikTok Teaser",
-                        category = "MARKETING",
-                        assignedAgentId = "7",
-                        assignedAgentRole = "Marketing Agent",
-                        priority = "MEDIUM",
-                        detailedInstruction = "Draft 5 high-converting Pinterest rich pins and TikTok hook script targeting aesthetic '${context.targetNiche}' with direct link to ${context.primaryShopDomain}.",
-                        estimatedMarginPercent = 52,
-                        zeroCostCompliance = true,
-                        suggestedAction = "DISPATCH_MARKETING",
-                        targetResource = "marketing/social"
-                    )
-                )
-            }
-            lower.contains("marketing") || lower.contains("social") || lower.contains("seo") || lower.contains("pin") || lower.contains("tiktok") -> {
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Multi-Channel Organic Growth Campaign Dispatch",
-                        category = "MARKETING",
-                        assignedAgentId = "7",
-                        assignedAgentRole = "Marketing Agent",
-                        priority = "HIGH",
-                        detailedInstruction = "Formulate 7-day organic viral content calendar across Pinterest, TikTok, and Instagram Reels. Zero ad spend required.",
-                        estimatedMarginPercent = 60,
-                        zeroCostCompliance = true,
-                        suggestedAction = "DISPATCH_MARKETING",
-                        targetResource = "marketing/organic"
-                    )
-                )
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "High-Intent Keyword & SEO Listing Metadata Formulation",
-                        category = "MARKET_RESEARCH",
-                        assignedAgentId = "5",
-                        assignedAgentRole = "Listing & SEO Agent",
-                        priority = "MEDIUM",
-                        detailedInstruction = "Compile 25 long-tail search tags, keyword-dense bullet points, and meta descriptions optimized for Google & Etsy organic indexing.",
-                        estimatedMarginPercent = 100,
-                        zeroCostCompliance = true,
-                        suggestedAction = "CREATE_TASK",
-                        targetResource = "storefront/seo"
-                    )
-                )
-            }
-            lower.contains("ledger") || lower.contains("tax") || lower.contains("finance") || lower.contains("revenue") || lower.contains("sale") -> {
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Double-Entry Ledger Audit & Unit Economics Reconciliation",
-                        category = "FINANCE",
-                        assignedAgentId = "9",
-                        assignedAgentRole = "Finance Agent",
-                        priority = "HIGH",
-                        detailedInstruction = "Perform whole-cent debit/credit audit across local Room ledger. Verify Stripe platform fee deductions (2.9% + 30¢) and ensure whole-cent balance.",
-                        estimatedMarginPercent = 100,
-                        zeroCostCompliance = true,
-                        suggestedAction = "AUDIT_LEDGER",
-                        targetResource = "ledger/transactions"
-                    )
-                )
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Schedule C & 1099-K Bookkeeping Summary Generation",
-                        category = "FINANCE",
-                        assignedAgentId = "9",
-                        assignedAgentRole = "Finance Agent",
-                        priority = "MEDIUM",
-                        detailedInstruction = "Aggregate gross revenues, allowable business deductions, and COGS to calculate quarterly estimated tax obligations.",
-                        estimatedMarginPercent = 100,
-                        zeroCostCompliance = true,
-                        suggestedAction = "AUDIT_LEDGER",
-                        targetResource = "ledger/schedule_c"
-                    )
-                )
-            }
-            else -> {
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Niche Viability & Competitor Analysis",
-                        category = "MARKET_RESEARCH",
-                        assignedAgentId = "2",
-                        assignedAgentRole = "Trend & Identity Agent",
-                        priority = "HIGH",
-                        detailedInstruction = "Analyze trending demand indicators and search volume for prompt: '$prompt'. Identify underserved micro-niches with guaranteed $0 COGS.",
-                        estimatedMarginPercent = 45,
-                        zeroCostCompliance = true,
-                        suggestedAction = "CREATE_TASK",
-                        targetResource = "research/trends"
-                    )
-                )
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Zero-Cost Product Concept Architecture",
-                        category = "PRODUCT_DESIGN",
-                        assignedAgentId = "4",
-                        assignedAgentRole = "Creative Design Agent",
-                        priority = "HIGH",
-                        detailedInstruction = "Formulate 3 high-perceived-value product concepts (Digital downloads & Printify items) matching founder inquiry '$prompt'.",
-                        estimatedMarginPercent = 50,
-                        zeroCostCompliance = true,
-                        suggestedAction = "DEPLOY_POD",
-                        targetResource = "storefront/catalog"
-                    )
-                )
-                suggestions.add(
-                    BusinessTaskSuggestion(
-                        title = "Organic Go-To-Market Distribution Plan",
-                        category = "MARKETING",
-                        assignedAgentId = "7",
-                        assignedAgentRole = "Marketing Agent",
-                        priority = "MEDIUM",
-                        detailedInstruction = "Draft organic launch blueprint with zero advertising budget targeting early adopters on social media.",
-                        estimatedMarginPercent = 55,
-                        zeroCostCompliance = true,
-                        suggestedAction = "DISPATCH_MARKETING",
-                        targetResource = "marketing/launch"
-                    )
-                )
-            }
-        }
+        // 1. Suggestion 1: POD Creative Vector Mockup
+        suggestions.add(
+            BusinessTaskSuggestion(
+                title = "Generate 300 DPI Vector Placement Mockup",
+                category = "POD_MOCKUP",
+                assignedAgentId = "4",
+                assignedAgentRole = "Creative Design Agent",
+                priority = "HIGH",
+                detailedInstruction = "Create 4500x5400 px CMYK transparent vector graphic for Heavyweight T-Shirt & Vintage Hoodie targeting niche '${context.targetNiche}'. Align to Chest Center (11\" x 13\") for Printify shop ${context.primaryShopDomain}.",
+                estimatedMarginPercent = 48,
+                zeroCostCompliance = true,
+                suggestedAction = "DEPLOY_POD",
+                targetResource = "printify/blueprints"
+            )
+        )
+
+        // 2. Suggestion 2: USPTO & Copyright IP Clearance
+        suggestions.add(
+            BusinessTaskSuggestion(
+                title = "Verify USPTO Trademark & Copyright Clearance",
+                category = "COMPLIANCE",
+                assignedAgentId = "10",
+                assignedAgentRole = "Legal Compliance Agent",
+                priority = "HIGH",
+                detailedInstruction = "Screen design typography, slogans, and graphic elements against USPTO registered marks in Class 025 (Apparel). Generate cryptographic clearance certificate.",
+                estimatedMarginPercent = 100,
+                zeroCostCompliance = true,
+                suggestedAction = "AUDIT_TRADEMARK",
+                targetResource = "legal/uspto"
+            )
+        )
+
+        // 3. Suggestion 3: Organic Social Discovery & Pinterest Marketing
+        suggestions.add(
+            BusinessTaskSuggestion(
+                title = "Publish Organic Pinterest Pin & TikTok Teaser",
+                category = "MARKETING",
+                assignedAgentId = "7",
+                assignedAgentRole = "Marketing Agent",
+                priority = "MEDIUM",
+                detailedInstruction = "Draft 5 high-converting Pinterest rich pins and TikTok hook script targeting aesthetic '${context.targetNiche}' with direct link to ${context.primaryShopDomain}.",
+                estimatedMarginPercent = 52,
+                zeroCostCompliance = true,
+                suggestedAction = "DISPATCH_MARKETING",
+                targetResource = "marketing/social"
+            )
+        )
+
+        // 4. Suggestion 4: High-Intent SEO & E-Commerce Listing Metadata
+        suggestions.add(
+            BusinessTaskSuggestion(
+                title = "High-Intent Keyword & SEO Listing Metadata Formulation",
+                category = "MARKET_RESEARCH",
+                assignedAgentId = "5",
+                assignedAgentRole = "Listing & SEO Agent",
+                priority = "HIGH",
+                detailedInstruction = "Compile 25 long-tail search tags, keyword-dense bullet points, and meta descriptions optimized for Google, Etsy, and Shopify organic indexing.",
+                estimatedMarginPercent = 100,
+                zeroCostCompliance = true,
+                suggestedAction = "CREATE_TASK",
+                targetResource = "storefront/seo"
+            )
+        )
+
+        // 5. Suggestion 5: Double-Entry Ledger Whole-Cent Reconciliation
+        suggestions.add(
+            BusinessTaskSuggestion(
+                title = "Double-Entry Ledger Audit & Unit Economics Reconciliation",
+                category = "FINANCE",
+                assignedAgentId = "9",
+                assignedAgentRole = "Finance Agent",
+                priority = "HIGH",
+                detailedInstruction = "Perform whole-cent debit/credit audit across local Room ledger. Verify Stripe platform fee deductions (2.9% + 30¢) and ensure whole-cent balance.",
+                estimatedMarginPercent = 100,
+                zeroCostCompliance = true,
+                suggestedAction = "AUDIT_LEDGER",
+                targetResource = "ledger/transactions"
+            )
+        )
+
+        // 6. Suggestion 6: Zero-Cost Digital Storefront Asset & License Key Mapping
+        suggestions.add(
+            BusinessTaskSuggestion(
+                title = "Deploy Autonomous Zero-Cost Digital Storefront & Access Tokens",
+                category = "PRODUCT_DESIGN",
+                assignedAgentId = "1",
+                assignedAgentRole = "Administrator AI",
+                priority = "HIGH",
+                detailedInstruction = "Formulate high-margin digital template bundle with cryptographic license key token mapping on GitHub with zero upfront capital.",
+                estimatedMarginPercent = 100,
+                zeroCostCompliance = true,
+                suggestedAction = "CREATE_TASK",
+                targetResource = "storefront/digital"
+            )
+        )
 
         return BusinessOperationsAnalysis(
             rawPrompt = prompt,

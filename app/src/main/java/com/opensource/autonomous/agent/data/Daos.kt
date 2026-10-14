@@ -83,6 +83,9 @@ interface LedgerDao {
     @Query("SELECT * FROM ledger_entries ORDER BY timestamp DESC")
     fun getAllEntries(): Flow<List<LedgerEntity>>
 
+    @Query("SELECT COALESCE(SUM(CASE WHEN category = 'SALE' THEN amountCents WHEN category = 'COGS' THEN -amountCents WHEN category = 'FEE' THEN -amountCents WHEN category = 'REFUND' THEN -amountCents ELSE 0 END), 0) FROM ledger_entries")
+    fun getLedgerBalance(): Flow<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: LedgerEntity)
 
@@ -256,26 +259,38 @@ interface GodAuditDao {
 }
 
 @Dao
-interface PodOrderDao {
+abstract class PodOrderDao {
     @Query("SELECT * FROM pod_orders ORDER BY timestamp DESC")
-    fun getAllOrders(): Flow<List<PodOrderEntity>>
+    abstract fun getAllOrders(): Flow<List<PodOrderEntity>>
+
+    @Query("SELECT * FROM pod_orders WHERE status != 'CANCELLED' ORDER BY timestamp DESC")
+    abstract fun getActiveOrders(): Flow<List<PodOrderEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrder(order: PodOrderEntity)
+    abstract suspend fun insertOrder(order: PodOrderEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrders(orders: List<PodOrderEntity>)
+    abstract suspend fun insertOrders(orders: List<PodOrderEntity>)
 
     @Query("SELECT * FROM pod_orders WHERE id = :id LIMIT 1")
-    suspend fun getOrderById(id: String): PodOrderEntity?
+    abstract suspend fun getOrderById(id: String): PodOrderEntity?
 
     @Query("UPDATE pod_orders SET status = :status, progressPercent = :progress WHERE id = :id")
-    suspend fun updateOrderStatus(id: String, status: String, progress: Int)
+    abstract suspend fun updateOrderStatus(id: String, status: String, progress: Int)
 
     @Query("DELETE FROM pod_orders WHERE id = :id")
-    suspend fun deleteOrder(id: String)
+    abstract suspend fun deleteOrder(id: String)
 
     @Query("DELETE FROM pod_orders")
-    suspend fun clearOrders()
+    abstract suspend fun clearOrders()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertLedgerEntryInternal(entry: LedgerEntity)
+
+    @Transaction
+    open suspend fun insertOrderWithLedger(order: PodOrderEntity, entry: LedgerEntity) {
+        insertOrder(order)
+        insertLedgerEntryInternal(entry)
+    }
 }
 

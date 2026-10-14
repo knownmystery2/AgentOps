@@ -1461,6 +1461,7 @@ fun MobileDesignerWorkspace(
                                     useWideViewPort = true
                                     cacheMode = WebSettings.LOAD_DEFAULT
                                     allowFileAccess = false
+                                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                                 }
                                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                 setLayerType(WebView.LAYER_TYPE_HARDWARE, null)
