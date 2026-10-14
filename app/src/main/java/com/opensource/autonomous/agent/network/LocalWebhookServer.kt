@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.opensource.autonomous.agent.data.AppDatabase
 import com.opensource.autonomous.agent.data.LedgerEntity
 import com.opensource.autonomous.agent.data.LogEntity
+import com.opensource.autonomous.agent.data.PodOrderEntity
 import com.opensource.autonomous.agent.data.TaskEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +29,6 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
     companion object {
         @Volatile
         var latestPodWorkspacePayload: String = "{}"
-        val livePodOrders = java.util.concurrent.CopyOnWriteArrayList<JsonObject>()
     }
     private val scope = CoroutineScope(Dispatchers.IO)
     private val gson = Gson()
@@ -69,12 +69,19 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
 
                     val requestLine = reader.readLine() ?: return@use
                     var contentLength = 0
+                    val headers = mutableMapOf<String, String>()
                     var line: String?
 
                     while (reader.readLine().also { line = it } != null) {
                         if (line.isNullOrBlank()) break
-                        if (line!!.startsWith("Content-Length:", ignoreCase = true)) {
-                            contentLength = line!!.substringAfter(":").trim().toIntOrNull() ?: 0
+                        val colonIdx = line!!.indexOf(':')
+                        if (colonIdx > 0) {
+                            val hName = line!!.substring(0, colonIdx).trim().lowercase()
+                            val hVal = line!!.substring(colonIdx + 1).trim()
+                            headers[hName] = hVal
+                            if (hName == "content-length") {
+                                contentLength = hVal.toIntOrNull() ?: 0
+                            }
                         }
                     }
 
@@ -134,37 +141,21 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                             }
 
                             val swarmArray = JsonArray()
-                            if (agentsFromDb.isNotEmpty()) {
-                                agentsFromDb.forEach { agent ->
-                                    val currentTask = tasksFromDb.find { it.assignedToAgentId == agent.id && it.status == "RUNNING" }
-                                        ?: tasksFromDb.find { it.assignedToAgentId == agent.id }
-                                    val status = if (currentTask?.status == "RUNNING") "ACTIVE" else "STANDBY"
-                                    val obj = JsonObject().apply {
-                                        addProperty("id", agent.id)
-                                        addProperty("name", agent.name)
-                                        addProperty("role", agent.role)
-                                        addProperty("status", status)
-                                        addProperty("model", "llama3")
-                                        addProperty("currentTask", currentTask?.title ?: "Monitoring operational stream")
-                                        addProperty("lastPingTimestamp", now)
-                                        addProperty("latencyMs", 12 + (agent.id.hashCode() % 10).toLong())
-                                    }
-                                    swarmArray.add(obj)
+                            agentsFromDb.forEach { agent ->
+                                val currentTask = tasksFromDb.find { it.assignedToAgentId == agent.id && it.status == "RUNNING" }
+                                    ?: tasksFromDb.find { it.assignedToAgentId == agent.id }
+                                val status = if (currentTask?.status == "RUNNING") "ACTIVE" else "STANDBY"
+                                val obj = JsonObject().apply {
+                                    addProperty("id", agent.id)
+                                    addProperty("name", agent.name)
+                                    addProperty("role", agent.role)
+                                    addProperty("status", status)
+                                    addProperty("model", "llama3")
+                                    addProperty("currentTask", currentTask?.title ?: "Standing by for business directive")
+                                    addProperty("lastPingTimestamp", now)
+                                    addProperty("latencyMs", 12 + (agent.id.hashCode() % 10).toLong())
                                 }
-                            } else {
-                                com.opensource.autonomous.agent.data.AutonomousAgent.DEFAULT_SWARM.forEach { agent ->
-                                    val obj = JsonObject().apply {
-                                        addProperty("id", agent.id)
-                                        addProperty("name", agent.name)
-                                        addProperty("role", agent.role.title)
-                                        addProperty("status", agent.status.name)
-                                        addProperty("model", "gemini-2.5-pro")
-                                        addProperty("currentTask", agent.currentTask)
-                                        addProperty("lastPingTimestamp", now)
-                                        addProperty("latencyMs", 14)
-                                    }
-                                    swarmArray.add(obj)
-                                }
+                                swarmArray.add(obj)
                             }
                             sendJsonResponse(writer, 200, gson.toJson(swarmArray))
                         }
@@ -214,81 +205,95 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                         }
 
 
-                        // 8. POD Queue & Active Orders GET (Factual Live Queue)
+                        // 8. Real-time Live POD Orders & Queue GET
                         method == "GET" && (path.startsWith("/api/pod/queue") || path.startsWith("/api/pod/orders")) -> {
+                            val ordersFromDb = try {
+                                db.podOrderDao().getAllOrders().first()
+                            } catch (_: Exception) {
+                                emptyList()
+                            }
                             val array = JsonArray()
-                            livePodOrders.forEach { array.add(it) }
+                            ordersFromDb.forEach { order ->
+                                array.add(JsonObject().apply {
+                                    addProperty("id", order.id)
+                                    addProperty("sku", order.sku)
+                                    addProperty("product", order.product)
+                                    addProperty("color", order.color)
+                                    addProperty("placement", order.placement)
+                                    addProperty("status", order.status)
+                                    addProperty("progressPercent", order.progressPercent)
+                                    addProperty("vectorDpi", order.vectorDpi)
+                                    addProperty("customerEmail", order.customerEmail)
+                                    addProperty("priceCents", order.priceCents)
+                                    addProperty("timestamp", order.timestamp)
+                                })
+                            }
                             sendJsonResponse(writer, 200, gson.toJson(array))
                         }
 
-                        // 8a. POD Order Placement POST
-                        method == "POST" && (path.startsWith("/api/pod/order") || path.startsWith("/api/pod/orders")) -> {
+                        // 8a. Live POD Order / Generate POST
+                        method == "POST" && (path.startsWith("/api/pod/order") || path.startsWith("/api/pod/orders") || path.startsWith("/api/pod/generate")) -> {
                             val rootJson = try {
                                 gson.fromJson(postData, JsonObject::class.java)
                             } catch (_: Exception) {
                                 JsonObject()
                             }
-                            val orderId = "ORD-" + (1000 + (now % 9000))
+                            val orderId = "pod-ord-" + UUID.randomUUID().toString().take(8)
+                            val sku = rootJson.get("sku")?.asString ?: "POD-HET-CHSL-2026"
                             val product = rootJson.get("product")?.asString ?: "Heavyweight T-Shirt"
-                            val color = rootJson.get("color")?.asString ?: "Dark Teal"
+                            val color = rootJson.get("color")?.asString ?: "Classic White"
                             val placement = rootJson.get("placement")?.asString ?: "Chest Center (11\" x 13\")"
-                            val grossCents = rootJson.get("grossCents")?.asLong ?: 2800L
-                            val supplierCostCents = rootJson.get("supplierCostCents")?.asLong ?: 1050L
-                            val sku = rootJson.get("sku")?.asString ?: "POD-HET-DT-2026"
+                            val customerEmail = rootJson.get("customerEmail")?.asString ?: "buyer@live.store"
+                            val priceCents = rootJson.get("priceCents")?.asLong ?: 2900L
 
-                            db.logDao().insertLog(
-                                LogEntity(
-                                    agentId = "Order Ingestion Agent",
-                                    message = "Received inbound API order #$orderId: $product ($color). Production routed to DTG print queue.",
-                                    timestamp = now
-                                )
+                            val newOrder = PodOrderEntity(
+                                id = orderId,
+                                sku = sku,
+                                product = product,
+                                color = color,
+                                placement = placement,
+                                status = "READY",
+                                progressPercent = 100,
+                                vectorDpi = 300,
+                                customerEmail = customerEmail,
+                                priceCents = priceCents,
+                                payloadJson = postData,
+                                timestamp = now
                             )
-                            db.ledgerDao().insertEntry(
-                                LedgerEntity(
-                                    timestamp = now,
-                                    code = "TX-POD-${now % 100000}",
-                                    store = "Print Defy Pop-Up",
-                                    platform = "Printify Direct API",
-                                    description = "$product ($color) - Order #$orderId",
-                                    accountDebit = "1010 Stripe Clearing",
-                                    accountCredit = "4010 POD Sales Revenue",
-                                    amountCents = grossCents,
-                                    hashToken = "0x" + UUID.randomUUID().toString().take(12),
-                                    category = "SALE"
+                            db.podOrderDao().insertOrder(newOrder)
+
+                            if (priceCents > 0L) {
+                                db.ledgerDao().insertEntry(
+                                    LedgerEntity(
+                                        timestamp = now,
+                                        code = "TX-POD-${now % 100000}",
+                                        store = "Print Defy Studio",
+                                        platform = "Printify POD Gateway",
+                                        description = "POD direct sale: $sku ($product, $color)",
+                                        accountDebit = "1020 Customer Clearing",
+                                        accountCredit = "4020 POD Merchandise Revenue",
+                                        amountCents = priceCents,
+                                        hashToken = "0x" + UUID.randomUUID().toString().take(12),
+                                        category = "SALE"
+                                    )
                                 )
-                            )
-
-                            val res = JsonObject().apply {
-                                addProperty("status", "ORDER_PLACED")
-                                addProperty("orderId", orderId)
-                                addProperty("sku", sku)
-                                addProperty("product", product)
-                                addProperty("color", color)
-                                addProperty("placement", placement)
-                                addProperty("grossCents", grossCents)
-                                addProperty("vectorDpi", 300)
-                                addProperty("orderStatus", "PRINTING")
-                                addProperty("timestamp", now)
                             }
-                            livePodOrders.add(0, res)
-                            sendJsonResponse(writer, 200, gson.toJson(res))
-                        }
 
-                        method == "POST" && path.startsWith("/api/pod/generate") -> {
-                            val rootJson = try {
-                                gson.fromJson(postData, JsonObject::class.java)
-                            } catch (_: Exception) {
-                                JsonObject()
-                            }
-                            val sku = rootJson.get("sku")?.asString ?: "POD-GEN-01"
                             db.logDao().insertLog(
                                 LogEntity(
                                     agentId = "POD Design Agent",
-                                    message = "Received 300 DPI vector generation request for SKU: $sku",
+                                    message = "Received real-time 300 DPI vector production order for SKU: $sku (Order ID: $orderId)",
                                     timestamp = now
                                 )
                             )
-                            sendJsonResponse(writer, 200, """{"status":"queued","sku":"$sku","timestamp":$now}""")
+                            val resp = JsonObject().apply {
+                                addProperty("status", "SUCCESS")
+                                addProperty("orderId", orderId)
+                                addProperty("sku", sku)
+                                addProperty("product", product)
+                                addProperty("timestamp", now)
+                            }
+                            sendJsonResponse(writer, 200, gson.toJson(resp))
                         }
 
                         // 8b. Pod Studio Desktop Workspace - Publish Route
@@ -302,6 +307,22 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                             val sku = rootJson.get("sku")?.asString ?: "POD-HET--CHSL-2026"
                             val title = rootJson.get("title")?.asString ?: "Print Defy Custom Apparel"
                             val syncId = "SYNC-PTFY-" + UUID.randomUUID().toString().substring(0, 8).uppercase()
+
+                            val podOrder = PodOrderEntity(
+                                id = syncId,
+                                sku = sku,
+                                product = title,
+                                color = rootJson.getAsJsonObject("garment")?.get("color_name")?.asString ?: "Classic White",
+                                placement = "Chest Center (11\" x 13\")",
+                                status = "READY",
+                                progressPercent = 100,
+                                vectorDpi = 300,
+                                customerEmail = "ops@printdefy.studio",
+                                priceCents = 2900L,
+                                payloadJson = postData,
+                                timestamp = now
+                            )
+                            db.podOrderDao().insertOrder(podOrder)
 
                             db.logDao().insertLog(
                                 LogEntity(
@@ -436,40 +457,17 @@ class LocalWebhookServer(private val port: Int = 8080, private val db: AppDataba
                             sendJsonResponse(writer, 200, gson.toJson(infoObj))
                         }
 
-                        // Stripe Payment Webhook Listener
+                        // Stripe Payment Webhook Listener with HMAC verification & ledger settlement
                         method == "POST" && path.startsWith("/webhook/stripe") -> {
-                            val rootJson = try {
-                                gson.fromJson(postData, JsonObject::class.java)
-                            } catch (_: Exception) {
-                                JsonObject()
-                            }
-                            val eventType = rootJson.get("type")?.asString ?: "checkout.session.completed"
-                            val dataObj = rootJson.getAsJsonObject("data")?.getAsJsonObject("object")
-                            val amountTotal = dataObj?.get("amount_total")?.asLong ?: 4900L
-                            val customerEmail = dataObj?.get("customer_details")?.asJsonObject?.get("email")?.asString ?: "customer@example.com"
-
-                            db.logDao().insertLog(
-                                LogEntity(
-                                    agentId = "Finance Agent",
-                                    message = "Stripe Webhook processed: $eventType for $customerEmail (Gross: $${amountTotal / 100.0})",
-                                    timestamp = now
-                                )
+                            val stripeService = StripeIntegrationService(
+                                db = db,
+                                apiKeyProvider = {
+                                    kotlinx.coroutines.runBlocking { db.settingsDao().getSettingsSync()?.keyStripe ?: "" }
+                                }
                             )
-                            db.ledgerDao().insertEntry(
-                                LedgerEntity(
-                                    timestamp = now,
-                                    code = "TX-STRIPE-${now % 100000}",
-                                    store = "Autonomous Storefront",
-                                    platform = "Stripe Webhook",
-                                    description = "Storefront Stripe sale: $eventType ($customerEmail)",
-                                    accountDebit = "1010 Stripe Clearing",
-                                    accountCredit = "4010 Digital Product Revenue",
-                                    amountCents = amountTotal,
-                                    hashToken = "0x" + UUID.randomUUID().toString().take(12),
-                                    category = "SALE"
-                                )
-                            )
-                            sendJsonResponse(writer, 200, """{"received":true,"event":"$eventType","timestamp":$now}""")
+                            val signature = headers["stripe-signature"]
+                            val result = stripeService.processWebhookPayload(postData, signature)
+                            sendJsonResponse(writer, 200, gson.toJson(result))
                         }
 
                         // Inbound CRM Support Webhook

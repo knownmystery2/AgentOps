@@ -255,3 +255,27 @@ interface GodAuditDao {
     suspend fun clearVerdicts()
 }
 
+@Dao
+interface PodOrderDao {
+    @Query("SELECT * FROM pod_orders ORDER BY timestamp DESC")
+    fun getAllOrders(): Flow<List<PodOrderEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrder(order: PodOrderEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrders(orders: List<PodOrderEntity>)
+
+    @Query("SELECT * FROM pod_orders WHERE id = :id LIMIT 1")
+    suspend fun getOrderById(id: String): PodOrderEntity?
+
+    @Query("UPDATE pod_orders SET status = :status, progressPercent = :progress WHERE id = :id")
+    suspend fun updateOrderStatus(id: String, status: String, progress: Int)
+
+    @Query("DELETE FROM pod_orders WHERE id = :id")
+    suspend fun deleteOrder(id: String)
+
+    @Query("DELETE FROM pod_orders")
+    suspend fun clearOrders()
+}
+

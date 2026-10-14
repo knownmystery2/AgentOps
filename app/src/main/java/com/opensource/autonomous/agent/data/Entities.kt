@@ -215,10 +215,28 @@ data class AgentMessageEntity(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-// Autonomous Zero-Cost Digital Product Entity
+// Live Print-on-Demand Order & Mockup Job Entity
+@Entity(tableName = "pod_orders")
+data class PodOrderEntity(
+    @PrimaryKey val id: String,
+    val sku: String,
+    val product: String,
+    val color: String,
+    val placement: String,
+    val status: String, // QUEUED, PROCESSING, READY, FULFILLED, CANCELLED
+    val progressPercent: Int = 0,
+    val vectorDpi: Int = 300,
+    val customerEmail: String = "",
+    val priceCents: Long = 0L,
+    val payloadJson: String = "{}",
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+// Autonomous Zero-Cost Digital Product Entity linked to Whole-Cents Ledger
 @Entity(tableName = "digital_products")
 data class DigitalProductEntity(
     @PrimaryKey val id: String,
+    val sku: String = "SKU-DIGITAL",
     val title: String,
     val niche: String,
     val category: String, // EBOOK, CODE_TEMPLATE, NOTION_SYSTEM, GRAPHIC_PACK, PROMPT_GUIDE
@@ -229,6 +247,8 @@ data class DigitalProductEntity(
     val contentPayload: String, // Full text/markdown or code deliverable
     val fileFormat: String, // Markdown (.md), JSON, Vector SVG, ZIP Bundle
     val downloadUrl: String, // Hosted asset download URL
+    val accessToken: String = "", // Secure access token / license key
+    val metadataJson: String = "{}", // Extended product metadata
     val stripePaymentLink: String, // Live or sandbox Stripe checkout URL
     val githubRepo: String, // Storefront repository where asset is hosted
     val status: String, // DRAFT, PENDING_APPROVAL, PUBLISHED_LIVE
@@ -237,6 +257,8 @@ data class DigitalProductEntity(
     val totalRevenueCents: Long = 0L,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+typealias DigitalProduct = DigitalProductEntity
 
 // Interceptor Architecture ("God" Overseer) Verdict Entity
 @Entity(tableName = "god_audit_verdicts")

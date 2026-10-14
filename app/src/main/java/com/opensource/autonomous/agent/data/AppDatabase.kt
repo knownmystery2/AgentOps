@@ -24,9 +24,10 @@ import kotlinx.coroutines.launch
         TrademarkCheckEntity::class,
         AgentMessageEntity::class,
         DigitalProductEntity::class,
-        GodAuditVerdictEntity::class
+        GodAuditVerdictEntity::class,
+        PodOrderEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -44,6 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun agentMessageDao(): AgentMessageDao
     abstract fun digitalProductDao(): DigitalProductDao
     abstract fun godAuditDao(): GodAuditDao
+    abstract fun podOrderDao(): PodOrderDao
 
 
     companion object {
@@ -204,6 +206,7 @@ abstract class AppDatabase : RoomDatabase() {
             db.storefrontDao().clearStorefronts()
             db.trademarkDao().clearChecks()
             db.digitalProductDao().clearProducts()
+            db.podOrderDao().clearOrders()
             db.agentMessageDao().clearMessages()
             db.logDao().clearLogs()
 
