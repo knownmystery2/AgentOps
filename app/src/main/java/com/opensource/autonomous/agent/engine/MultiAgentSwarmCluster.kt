@@ -469,11 +469,29 @@ class MultiAgentSwarmCluster(
     }
 
     /**
-     * Creative Design Agent:
-     * Transforms raw concepts into rich descriptions, SEO tags, and visual art prompts.
+     * Lead Autonomous Design Director AI for "Kritical Limitz" (KL):
+     * Transforms raw concepts into master-class luxury streetwear graphic prompts,
+     * SEO tags, placement matrix, and staging tags.
      */
     private suspend fun triggerCreativeDesignAgent(concept: RawProductConcept, theme: String): PolishedProductDesign = withContext(Dispatchers.IO) {
-        val prompt = """Act as the Creative Design Agent. Fit this product into the store theme: "$theme". Polish this raw idea: "${concept.rawIdea}" with the title "${concept.title}". Make it look neat, rare, and high-end. Provide: 1. An enticing product description. 2. A comma-separated list of SEO keywords. 3. A highly detailed image generation prompt for a free open-source AI image generator to design the product layout. Output strictly as JSON: { "title": "string", "description": "string", "keywords": ["string"], "visualArtPrompt": "string" }"""
+        val prompt = """
+Act as the Lead Autonomous Design Director AI for "Kritical Limitz" (KL), a high-end underground luxury streetwear POD brand.
+Fit this product into the luxury streetwear theme: "$theme". Polish this concept: "${concept.rawIdea}" with title "${concept.title}".
+AESTHETIC PILLARS:
+1. Chicano & West Coast Street Culture: Hyper-detailed fine-line black and grey illustration, custom lettering, realistic portraiture, lowrider artifacts, urban textures.
+2. Dark Occult & Esoteric: Satanic sigils, demonic skulls, inverted crosses, protective talismans, dark surrealism.
+3. Luxury Egyptian Mysticism: Intricate scarabs, Hieroglyphic scripts, Ankhs, Eye of Horus.
+4. Hyper-Detailed Texturing: Deeply intricate paisley, barbed wire, heavy metallic elements, bleeding ink dynamics.
+
+Provide:
+1. An enticing luxury streetwear product description.
+2. A comma-separated list of SEO keywords.
+3. Master text-to-image prompt (300 DPI vector, high contrast, fine cross-hatching, dramatic chiaroscuro lighting, no blurry lines, no low-res).
+4. Placement Matrix instructions.
+5. Mandatory tag at the end: [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]
+
+Output strictly as JSON: { "title": "string", "description": "string", "keywords": ["string"], "visualArtPrompt": "string" }
+""".trimIndent()
 
         val geminiResponse = callGeminiApi(prompt)
         if (geminiResponse != null) {
@@ -481,37 +499,41 @@ class MultiAgentSwarmCluster(
             if (jsonObject != null && jsonObject.has("title")) {
                 val title = jsonObject.get("title").asString
                 val description = jsonObject.get("description")?.asString ?: ""
-                val keywords = jsonObject.getAsJsonArray("keywords")?.map { it.asString } ?: listOf("digital download", "high quality")
-                val visualArtPrompt = jsonObject.get("visualArtPrompt")?.asString ?: "minimalist vector art"
+                val keywords = jsonObject.getAsJsonArray("keywords")?.map { it.asString } ?: listOf("kritical-limitz", "luxury-streetwear", "300-dpi-vector")
+                var visualArtPrompt = jsonObject.get("visualArtPrompt")?.asString ?: "master-class luxury underground streetwear"
+                if (!visualArtPrompt.contains("STATUS: PENDING HUMAN REVIEW")) {
+                    visualArtPrompt += " [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+                }
 
                 return@withContext PolishedProductDesign(
                     title = title,
                     description = description,
                     keywords = keywords,
                     visualArtPrompt = visualArtPrompt,
-                    suggestedPriceCents = 1900L,
+                    suggestedPriceCents = 2900L,
                     category = "DIGITAL_PRODUCT",
-                    fileFormat = "Vector SVG + Markdown Blueprint"
+                    fileFormat = "Vector SVG + 300 DPI CMYK Master Spec"
                 )
             }
         }
 
-        // Clean local deterministic fallback
+        // Clean local deterministic fallback adhering strictly to Kritical Limitz aesthetic
         PolishedProductDesign(
             title = concept.title,
-            description = "A bespoke limited-release artifact in the '$theme' capsule collection. Handcrafted vectors with flawless typographic balance, 300 DPI scalable precision, and instant zero-latency digital delivery.",
+            description = "Bespoke underground luxury streetwear artifact from Kritical Limitz ($theme capsule). Hyper-detailed fine-line black and grey illustration, intricate Egyptian scarab motifs, dark esoteric sigils, and seamless paisley layering. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
             keywords = listOf(
-                "digital download",
-                theme.lowercase().replace(" ", "-"),
-                "300 dpi vector",
-                "minimalist aesthetic",
-                "instant access",
-                "commercial license"
+                "kritical-limitz",
+                "underground-luxury-streetwear",
+                "chicano-fine-line",
+                "dark-occult",
+                "egyptian-mysticism",
+                "300-dpi-vector",
+                "pending-staging"
             ),
-            visualArtPrompt = "Ultra-clean high-resolution vector artwork of ${concept.rawIdea}, Bauhaus typography, cyber copper and obsidian slate palette, 300 DPI technical blueprint style, high aesthetic product mockup, studio lighting, zero watermark",
-            suggestedPriceCents = 1900L,
+            visualArtPrompt = "Master-class dark custom streetwear illustration of ${concept.rawIdea}, fine-line black and grey ink work, intricate layered Egyptian scarab and dark esoteric sigils, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+            suggestedPriceCents = 2900L,
             category = "DIGITAL_PRODUCT",
-            fileFormat = "Vector SVG + Markdown Blueprint"
+            fileFormat = "Vector SVG + 300 DPI CMYK Master Spec"
         )
     }
 

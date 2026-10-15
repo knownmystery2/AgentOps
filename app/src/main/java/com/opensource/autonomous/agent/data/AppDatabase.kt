@@ -90,7 +90,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * Ensures GOD agent is always seeded and active in the database.
+         * Ensures GOD overseer and Lead Autonomous Design Director AI (Kritical Limitz) are seeded and up to date.
          */
         suspend fun ensureGodAgentSeeded(db: AppDatabase) {
             val god = db.agentDao().getAgentById("0")
@@ -105,6 +105,16 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 )
             }
+            // Always ensure Agent 4 has the Kritical Limitz Lead Autonomous Design Director AI system instructions
+            db.agentDao().insertAgent(
+                AgentEntity(
+                    id = "4",
+                    name = "Lead Autonomous Design Director AI",
+                    role = "POD Pop Up Storefront & Design Director for Kritical Limitz",
+                    systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
+                    isActive = true
+                )
+            )
         }
 
         /**
@@ -121,7 +131,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AgentEntity("1", "Administrator AI", "Executive Administrator & Router", AgentPrompts.ADMINISTRATOR_SYSTEM_PROMPT, isActive = true),
                 AgentEntity("2", "Trend & Identity Agent", "Trend & Pop-Up Store Identity", AgentPrompts.TREND_IDENTITY_SYSTEM_PROMPT, isActive = true),
                 AgentEntity("3", "Brand Agent", "Identity & Voice Architecture", "ROLE: Brand Identity Architect. You establish brand tone and visual style guidelines.", isActive = true),
-                AgentEntity("4", "Creative Design Agent", "Design & Visual Prompt Formulation", AgentPrompts.CREATIVE_DESIGN_SYSTEM_PROMPT, isActive = true),
+                AgentEntity("4", "Lead Autonomous Design Director AI", "POD Pop Up Storefront & Design Director for Kritical Limitz", AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT, isActive = true),
                 AgentEntity("5", "Listing & SEO Agent", "E-Commerce Copywriter & Metadata", AgentPrompts.CONTENT_PROMPT, isActive = true),
                 AgentEntity("7", "Marketing Agent", "Organic Growth & Content Campaigns", AgentPrompts.MARKETING_PROMPT, isActive = true),
                 AgentEntity("8", "Customer Service Agent", "Support & Inquiries", AgentPrompts.SUPPORT_PROMPT, isActive = true),
@@ -132,8 +142,40 @@ abstract class AppDatabase : RoomDatabase() {
             db.agentDao().insertAgents(agents)
 
 
-            // 2. Seed Default Production Settings
-            db.settingsDao().saveSettings(SettingsEntity())
+            // 2. Seed Default Production Settings with Active Store Secrets from BuildConfig
+            val buildConfigGithub = try { com.example.BuildConfig.GITHUB_TOKEN.trim() } catch (_: Throwable) { "" }
+            val buildConfigStripe = try { com.example.BuildConfig.STRIPE_SECRET_KEY.trim() } catch (_: Throwable) { "" }
+            val buildConfigStripePub = try { com.example.BuildConfig.STRIPE_PUBLISHABLE_KEY.trim() } catch (_: Throwable) { "" }
+            val buildConfigGemini = try { com.example.BuildConfig.GEMINI_API_KEY.trim() } catch (_: Throwable) { "" }
+
+            val initialSettings = SettingsEntity(
+                keyGithub = if (!buildConfigGithub.startsWith("placeholder_")) buildConfigGithub else "",
+                keyStripe = if (!buildConfigStripe.startsWith("placeholder_")) buildConfigStripe else "",
+                keyStripePublishable = if (!buildConfigStripePub.startsWith("placeholder_")) buildConfigStripePub else "",
+                keyGemini = if (!buildConfigGemini.startsWith("placeholder_")) buildConfigGemini else "",
+                storefrontProvider = "GitHub Pages + Stripe",
+                printifyShopDomain = "kriticallimitz.printify.me"
+            )
+            db.settingsDao().saveSettings(initialSettings)
+
+            // Seed Autonomous Storefront Location & Setup
+            val defaultStorefront = StorefrontEntity(
+                id = "storefront-main",
+                companyName = "Print Defy Studio",
+                businessNiche = "Sustainable Apparel & Modern Creator Goods",
+                platformType = "GitHub Pages Jamstack Edge + Stripe Payment Links",
+                status = "ACTIVE",
+                repoName = "printdefy-storefront",
+                repoUrl = "https://kriticallimitz.printify.me",
+                stripePaymentLink = "https://checkout.stripe.com/pay/cs_live_printdefy",
+                monthlyRevenueCents = 0L,
+                monthlyCostCents = 0L,
+                productsCount = 0,
+                complianceStatus = "VERIFIED_100_CLEAN",
+                setupLog = "Autonomous storefront online. Domain: kriticallimitz.printify.me. Backend Edge: port 8080. Zero-cost capital directive active.",
+                createdAt = now
+            )
+            db.storefrontDao().insertStorefront(defaultStorefront)
 
             // 3. Seed Free-Tier Standby Compute Providers
             val providers = listOf(

@@ -1,9 +1,11 @@
 package com.opensource.autonomous.agent.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,10 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import com.example.ui.theme.BrandEmerald
 import com.example.ui.theme.ProfitGreen
 import com.opensource.autonomous.agent.data.AgentStatus
@@ -63,6 +68,18 @@ fun DashboardScreen(
     val businessAnalysis by viewModel.businessAnalysis.collectAsState()
     val isProcessingBusinessPrompt by viewModel.isProcessingBusinessPrompt.collectAsState()
     val businessOperationStatusMessage by viewModel.businessOperationStatusMessage.collectAsState()
+    val secretStatus by viewModel.secretStatus.collectAsState()
+    val stripeVerificationStatus by viewModel.stripeVerificationStatus.collectAsState()
+    val githubVerificationStatus by viewModel.githubVerificationStatus.collectAsState()
+    val isVerifyingStripe by viewModel.isVerifyingStripe.collectAsState()
+    val isVerifyingGithub by viewModel.isVerifyingGithub.collectAsState()
+    val storeSecretsImplementationResult by viewModel.storeSecretsImplementationResult.collectAsState()
+    val isImplementingStoreSecrets by viewModel.isImplementingStoreSecrets.collectAsState()
+    val pathwayTestStatus by viewModel.pathwayTestStatus.collectAsState()
+    var showImplementSecretsDialog by remember { mutableStateOf(false) }
+    var inputStripeKey by remember { mutableStateOf("") }
+    var inputGithubToken by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     val salesList = ledger.filter { it.category == "SALE" }
     val grossCents = salesList.sumOf { it.amountCents }
@@ -925,6 +942,350 @@ fun DashboardScreen(
                             Icon(Icons.Default.RocketLaunch, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Create Zero-Cost Storefront For Me")
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // AUTONOMOUS STOREFRONT LOCATION, DIRECTIVES, ROUTES & STORE SECRETS
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().testTag("autonomous_storefront_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFF2563EB).copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Storefront, contentDescription = null, tint = Color(0xFF2563EB))
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Autonomous Storefront Hub",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Edge Location • Directives • Routes • Secrets",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF2563EB)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = ProfitGreen.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "ONLINE • ZERO-COST",
+                                color = ProfitGreen,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 1. STOREFRONT LOCATION SPECIFICATION
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Storefront Location & Domains", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://kriticallimitz.printify.me"))
+                                            context.startActivity(intent)
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        modifier = Modifier.height(26.dp).testTag("open_storefront_browser_btn")
+                                    ) {
+                                        Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Online Store", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:8080/storefront"))
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (_: Exception) {
+                                                val emuIntent = Intent(Intent.ACTION_VIEW, Uri.parse("http://10.0.2.2:8080/storefront"))
+                                                context.startActivity(emuIntent)
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        modifier = Modifier.height(26.dp).testTag("open_local_storefront_btn")
+                                    ) {
+                                        Icon(Icons.Default.Storefront, contentDescription = null, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Web App (Port 8080)", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Primary Online Domain:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("kriticallimitz.printify.me", fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = BrandEmerald)
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("HTML5 Storefront URL:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("http://127.0.0.1:8080/storefront", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = Color(0xFF38BDF8))
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Edge Backend (Host):", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("http://127.0.0.1:8080/api/storefront", fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Emulator Network:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("http://10.0.2.2:8080/api/storefront", fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            }
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Cloud Edge Host:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("GitHub Pages Jamstack Edge + Stripe CDN", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 2. AUTONOMOUS DIRECTIVES
+                    Text("Autonomous Storefront Directives (Enforced)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(
+                            "DIR-01 ZERO-COST MANDATE" to "All products on-demand post-checkout. $0.00 founder capital.",
+                            "DIR-02 AUTO-FULFILLMENT" to "Printify API routes 300 DPI vectors to optimal global print nodes.",
+                            "DIR-03 WHOLE-CENT SETTLEMENT" to "Stripe transactions settle into double-entry Room ledger instantly.",
+                            "DIR-04 CRYPTOGRAPHIC ASSETS" to "Digital sales deliver signed license keys and GitHub repo access.",
+                            "DIR-05 USPTO COMPLIANCE SHIELD" to "Mandatory trademark screening before public catalog indexing.",
+                            "DIR-06 DUAL EDGE RESOLUTION" to "Self-healing dual routing (127.0.0.1 / 10.0.2.2) prevents dropped requests."
+                        ).forEach { (dirCode, dirDesc) ->
+                            Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(14.dp).padding(top = 2.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Column {
+                                    Text(dirCode, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Text(dirDesc, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 3. BACKEND ROUTES & PATHWAYS DIRECTORY
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Active Backend Routes & Pathways (Port 8080)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Tap to Ping", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "/storefront" to "GET",
+                            "/api/storefront/location" to "GET",
+                            "/api/storefront/routes" to "GET",
+                            "/api/storefront/directives" to "GET",
+                            "/api/storefront/catalog" to "GET",
+                            "/api/storefront/checkout" to "POST",
+                            "/api/storefront/asset/DIG-AGT-ARCH-2026" to "GET",
+                            "/webhook/stripe" to "POST",
+                            "/webhook/printify" to "POST",
+                            "/webhook/support" to "POST",
+                            "/api/pod/orders" to "GET/POST",
+                            "/api/pod/workspace/publish" to "POST"
+                        ).forEach { (rPath, rMethod) ->
+                            val testStatus = pathwayTestStatus[rPath]
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (testStatus != null) ProfitGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, if (testStatus != null) ProfitGreen else MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.clickable {
+                                    viewModel.testStorefrontBackendPathway(rPath)
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(rMethod, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (testStatus != null) ProfitGreen else BrandEmerald)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(rPath, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+                                    if (testStatus != null) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(testStatus, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = ProfitGreen)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 4. STORE SECRETS & GATEWAYS (STRIPE & GITHUB)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Store Secrets & API Keys", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Button(
+                                    onClick = { showImplementSecretsDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BrandEmerald),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(26.dp).testTag("implement_store_secrets_btn")
+                                ) {
+                                    Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Implement Secrets", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Stripe Key Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Stripe Secret Key:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(secretStatus.stripeSecretKeyMasked, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = if (secretStatus.isStripeConfigured) ProfitGreen else Color(0xFFF59E0B))
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.verifyStripeConnection() },
+                                    enabled = !isVerifyingStripe,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(28.dp).testTag("test_stripe_btn")
+                                ) {
+                                    if (isVerifyingStripe) {
+                                        CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 1.5.dp)
+                                    } else {
+                                        Text("Test Stripe", fontSize = 10.sp)
+                                    }
+                                }
+                            }
+
+                            if (stripeVerificationStatus != null) {
+                                Text(stripeVerificationStatus!!, fontSize = 10.sp, color = BrandEmerald, fontWeight = FontWeight.Medium)
+                            }
+
+                            HorizontalDivider()
+
+                            // GitHub Token Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("GitHub Access Token:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(secretStatus.githubTokenMasked, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = if (secretStatus.isGitHubConfigured) ProfitGreen else Color(0xFFF59E0B))
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.verifyGitHubConnection() },
+                                    enabled = !isVerifyingGithub,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(28.dp).testTag("test_github_btn")
+                                ) {
+                                    if (isVerifyingGithub) {
+                                        CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 1.5.dp)
+                                    } else {
+                                        Text("Test GitHub", fontSize = 10.sp)
+                                    }
+                                }
+                            }
+
+                            if (githubVerificationStatus != null) {
+                                Text(githubVerificationStatus!!, fontSize = 10.sp, color = BrandEmerald, fontWeight = FontWeight.Medium)
+                            }
+
+                            if (storeSecretsImplementationResult != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = ProfitGreen.copy(alpha = 0.15f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ProfitGreen, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(storeSecretsImplementationResult!!.message, fontSize = 10.sp, color = ProfitGreen, fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Action buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.buildAllThreeSuggestions() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            modifier = Modifier.weight(1f).testTag("build_three_suggestions_storefront_btn")
+                        ) {
+                            Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Build All 3 Suggestions", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = onNavigateToMockupStudio,
+                            modifier = Modifier.weight(1f).testTag("launch_mockup_studio_storefront_btn")
+                        ) {
+                            Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Open Mockup Studio", fontSize = 11.sp)
                         }
                     }
                 }
@@ -1848,6 +2209,77 @@ fun DashboardScreen(
                 )
             }
         }
+    }
+
+    if (showImplementSecretsDialog) {
+        AlertDialog(
+            onDismissRequest = { showImplementSecretsDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Key, contentDescription = null, tint = BrandEmerald)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Implement Store Secrets")
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Synchronize or configure the live Stripe Secret Key and GitHub Access Token into the persistent Room database store secrets.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = inputStripeKey,
+                        onValueChange = { inputStripeKey = it },
+                        label = { Text("Stripe Secret Key (sk_live / sk_test)") },
+                        placeholder = { Text(secretStatus.stripeSecretKeyMasked) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("input_stripe_key_dialog")
+                    )
+
+                    OutlinedTextField(
+                        value = inputGithubToken,
+                        onValueChange = { inputGithubToken = it },
+                        label = { Text("GitHub Token (ghp_ / pat_)") },
+                        placeholder = { Text(secretStatus.githubTokenMasked) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("input_github_token_dialog")
+                    )
+
+                    FilledTonalButton(
+                        onClick = {
+                            viewModel.implementStoreSecrets()
+                            showImplementSecretsDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("sync_env_secrets_dialog_btn")
+                    ) {
+                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Auto-Import from Secrets Panel / .env", fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.implementStoreSecrets(
+                            stripeKey = inputStripeKey.takeIf { it.isNotBlank() },
+                            githubToken = inputGithubToken.takeIf { it.isNotBlank() }
+                        )
+                        showImplementSecretsDialog = false
+                    },
+                    modifier = Modifier.testTag("save_secrets_dialog_btn")
+                ) {
+                    Text("Save & Implement")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImplementSecretsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

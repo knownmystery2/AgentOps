@@ -45,7 +45,14 @@ fun ApprovalsScreen(
     val activeEndpoint = settings?.backendServerEndpoint ?: "http://127.0.0.1:8080"
 
     val filteredDecisions = when (selectedFilter) {
-        "POD" -> decisions.filter { it.agentSource.contains("POD") || it.description.contains("Tee") || it.description.contains("Hoodie") }
+        "POD" -> decisions.filter {
+            it.agentSource.contains("POD") ||
+            it.agentSource.contains("Kritical Limitz") ||
+            it.agentSource.contains("Design Director") ||
+            it.description.contains("POD") ||
+            it.description.contains("Tee") ||
+            it.description.contains("Hoodie")
+        }
         "SUPPORT" -> decisions.filter { it.agentSource.contains("Customer") || it.description.contains("Refund") }
         else -> decisions
     }

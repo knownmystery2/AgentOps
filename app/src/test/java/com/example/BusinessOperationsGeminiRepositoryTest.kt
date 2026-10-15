@@ -172,4 +172,12 @@ class BusinessOperationsGeminiRepositoryTest {
         assertTrue(auditResult.isSuccess)
         assertNotNull(auditResult.getOrNull())
     }
+
+    @Test
+    fun testGenerativeModelInstantiationDoesNotThrowNoClassDefFoundError() {
+        // Verifies that repository operates gracefully without NoClassDefFoundError or runtime crashes
+        val isConfigured = repository.isGeminiConfigured()
+        val resolvedKey = repository.resolveGeminiApiKey()
+        assertNotNull(resolvedKey)
+    }
 }

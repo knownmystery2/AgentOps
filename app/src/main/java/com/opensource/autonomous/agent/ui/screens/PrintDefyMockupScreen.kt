@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -186,7 +187,7 @@ fun PrintDefyMockupScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Return to Dashboard")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Return to Dashboard")
                         }
                     },
                     actions = {
@@ -643,7 +644,7 @@ fun PrintDefyMockupScreen(
                             },
                             modifier = Modifier.size(32.dp)
                         ) {
-                            Icon(Icons.Default.RotateRight, contentDescription = "Rotate 45°", modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = "Rotate 45°", modifier = Modifier.size(18.dp))
                         }
                         VerticalDivider(modifier = Modifier.height(20.dp))
                         IconButton(
@@ -1155,7 +1156,7 @@ fun DrawScope.drawRealisticGarment(
             // Draw Hoodie silhouette
             val hoodiePath = Path().apply {
                 moveTo(w * 0.30f, h * 0.10f)
-                quadraticBezierTo(w * 0.5f, if (isBackSide) 0.06f * h else 0.03f * h, w * 0.70f, h * 0.10f)
+                quadraticTo(w * 0.5f, if (isBackSide) 0.06f * h else 0.03f * h, w * 0.70f, h * 0.10f)
                 lineTo(w * 0.88f, h * 0.25f)
                 lineTo(w * 0.96f, h * 0.55f)
                 lineTo(w * 0.84f, h * 0.60f)
@@ -1188,8 +1189,8 @@ fun DrawScope.drawRealisticGarment(
             // Tote Bag silhouette
             val strap = Path().apply {
                 moveTo(w * 0.35f, h * 0.35f)
-                quadraticBezierTo(w * 0.35f, h * 0.08f, w * 0.50f, h * 0.08f)
-                quadraticBezierTo(w * 0.65f, h * 0.08f, w * 0.65f, h * 0.35f)
+                quadraticTo(w * 0.35f, h * 0.08f, w * 0.50f, h * 0.08f)
+                quadraticTo(w * 0.65f, h * 0.08f, w * 0.65f, h * 0.35f)
             }
             drawPath(strap, color = garmentColor, style = Stroke(width = 24f))
             drawRoundRect(
@@ -1211,7 +1212,7 @@ fun DrawScope.drawRealisticGarment(
             val shirtPath = Path().apply {
                 // Collar neck curve
                 moveTo(w * 0.34f, h * 0.10f)
-                quadraticBezierTo(w * 0.5f, if (isBackSide) 0.13f * h else 0.20f * h, w * 0.66f, h * 0.10f)
+                quadraticTo(w * 0.5f, if (isBackSide) 0.13f * h else 0.20f * h, w * 0.66f, h * 0.10f)
                 // Right shoulder
                 lineTo(w * 0.86f, h * 0.18f)
                 // Right sleeve
@@ -1238,12 +1239,12 @@ fun DrawScope.drawRealisticGarment(
             val collarPath = Path().apply {
                 if (isBackSide) {
                     moveTo(w * 0.34f, h * 0.10f)
-                    quadraticBezierTo(w * 0.5f, h * 0.12f, w * 0.66f, h * 0.10f)
-                    quadraticBezierTo(w * 0.5f, h * 0.14f, w * 0.34f, h * 0.10f)
+                    quadraticTo(w * 0.5f, h * 0.12f, w * 0.66f, h * 0.10f)
+                    quadraticTo(w * 0.5f, h * 0.14f, w * 0.34f, h * 0.10f)
                 } else {
                     moveTo(w * 0.34f, h * 0.10f)
-                    quadraticBezierTo(w * 0.5f, h * 0.18f, w * 0.66f, h * 0.10f)
-                    quadraticBezierTo(w * 0.5f, h * 0.22f, w * 0.34f, h * 0.10f)
+                    quadraticTo(w * 0.5f, h * 0.18f, w * 0.66f, h * 0.10f)
+                    quadraticTo(w * 0.5f, h * 0.22f, w * 0.34f, h * 0.10f)
                 }
             }
             drawPath(collarPath, color = Color.White.copy(alpha = 0.22f), style = Stroke(width = 2f))

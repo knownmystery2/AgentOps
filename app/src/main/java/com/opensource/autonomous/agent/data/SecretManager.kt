@@ -1,6 +1,8 @@
 package com.opensource.autonomous.agent.data
 
 import com.example.BuildConfig
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,6 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * SecretStatus represents the configuration state and safe masked preview of active API credentials.
@@ -29,6 +35,19 @@ data class SecretStatus(
     val stripeSource: String = "None",
     val geminiSource: String = "None",
     val printifySource: String = "None"
+)
+
+/**
+ * Result of implementing Stripe and GitHub keys into the store secrets.
+ */
+data class StoreSecretsImplementationResult(
+    val isGitHubConfigured: Boolean,
+    val isStripeSecretConfigured: Boolean,
+    val isStripePublishableConfigured: Boolean,
+    val githubMasked: String,
+    val stripeSecretMasked: String,
+    val stripePublishableMasked: String,
+    val message: String
 )
 
 /**
@@ -67,8 +86,9 @@ class SecretManager(
     private var cachedPrintifyShopId: String = "26650832"
 
     init {
-        // Observe settings changes reactively from Room
+        // Observe settings changes reactively from Room and sync BuildConfig secrets into Room
         scope.launch {
+            syncBuildConfigToRoom()
             settingsDao.getSettings().collect { settings ->
                 refreshSecrets(settings)
             }
@@ -310,6 +330,173 @@ class SecretManager(
         cachedPrintifyShopDomain = domain.trim()
         cachedPrintifyShopId = shopId.trim()
         refreshSecrets(updated)
+    }
+
+    /**
+     * Synchronizes non-placeholder credentials from BuildConfig (.env) into Room database settings.
+     * Ensures store secrets are stored in the underlying database for autonomous operations.
+     */
+    suspend fun syncBuildConfigToRoom() = withContext(Dispatchers.IO) {
+        val current = settingsDao.getSettingsSync() ?: SettingsEntity()
+        var updated = current
+
+        val buildConfigGithub = try { BuildConfig.GITHUB_TOKEN.trim() } catch (_: Throwable) { "" }
+        val buildConfigStripe = try { BuildConfig.STRIPE_SECRET_KEY.trim() } catch (_: Throwable) { "" }
+        val buildConfigStripePub = try { BuildConfig.STRIPE_PUBLISHABLE_KEY.trim() } catch (_: Throwable) { "" }
+        val buildConfigGemini = try { BuildConfig.GEMINI_API_KEY.trim() } catch (_: Throwable) { "" }
+
+        var changed = false
+        if (updated.keyGithub.isBlank() && buildConfigGithub.isNotBlank() && !buildConfigGithub.startsWith("placeholder_")) {
+            updated = updated.copy(keyGithub = buildConfigGithub)
+            changed = true
+        }
+        if (updated.keyStripe.isBlank() && buildConfigStripe.isNotBlank() && !buildConfigStripe.startsWith("placeholder_")) {
+            updated = updated.copy(keyStripe = buildConfigStripe)
+            changed = true
+        }
+        if (updated.keyStripePublishable.isBlank() && buildConfigStripePub.isNotBlank() && !buildConfigStripePub.startsWith("placeholder_")) {
+            updated = updated.copy(keyStripePublishable = buildConfigStripePub)
+            changed = true
+        }
+        if (updated.keyGemini.isBlank() && buildConfigGemini.isNotBlank() && !buildConfigGemini.startsWith("placeholder_")) {
+            updated = updated.copy(keyGemini = buildConfigGemini)
+            changed = true
+        }
+
+        if (changed) {
+            settingsDao.saveSettings(updated)
+            refreshSecrets(updated)
+        }
+    }
+
+    /**
+     * Implements the Stripe key and GitHub key directly into the Room database store secrets.
+     * Extracts keys from BuildConfig / .env or accepts manual overrides, writing them to SettingsEntity.
+     */
+    suspend fun implementKeysIntoStoreSecrets(
+        stripeSecret: String? = null,
+        stripePublishable: String? = null,
+        githubToken: String? = null
+    ): StoreSecretsImplementationResult = withContext(Dispatchers.IO) {
+        val current = settingsDao.getSettingsSync() ?: SettingsEntity()
+        val buildConfigGithub = try { BuildConfig.GITHUB_TOKEN.trim() } catch (_: Throwable) { "" }
+        val buildConfigStripe = try { BuildConfig.STRIPE_SECRET_KEY.trim() } catch (_: Throwable) { "" }
+        val buildConfigStripePub = try { BuildConfig.STRIPE_PUBLISHABLE_KEY.trim() } catch (_: Throwable) { "" }
+
+        val finalGithub = when {
+            !githubToken.isNullOrBlank() -> githubToken.trim()
+            current.keyGithub.isNotBlank() && !current.keyGithub.startsWith("placeholder_") -> current.keyGithub.trim()
+            buildConfigGithub.isNotBlank() && !buildConfigGithub.startsWith("placeholder_") -> buildConfigGithub
+            else -> current.keyGithub.trim()
+        }
+
+        val finalStripeSecret = when {
+            !stripeSecret.isNullOrBlank() -> stripeSecret.trim()
+            current.keyStripe.isNotBlank() && !current.keyStripe.startsWith("placeholder_") -> current.keyStripe.trim()
+            buildConfigStripe.isNotBlank() && !buildConfigStripe.startsWith("placeholder_") -> buildConfigStripe
+            else -> current.keyStripe.trim()
+        }
+
+        val finalStripePub = when {
+            !stripePublishable.isNullOrBlank() -> stripePublishable.trim()
+            current.keyStripePublishable.isNotBlank() && !current.keyStripePublishable.startsWith("placeholder_") -> current.keyStripePublishable.trim()
+            buildConfigStripePub.isNotBlank() && !buildConfigStripePub.startsWith("placeholder_") -> buildConfigStripePub
+            else -> current.keyStripePublishable.trim()
+        }
+
+        val updated = current.copy(
+            keyGithub = finalGithub,
+            keyStripe = finalStripeSecret,
+            keyStripePublishable = finalStripePub
+        )
+
+        settingsDao.saveSettings(updated)
+        cachedGithubToken = finalGithub
+        cachedStripeSecretKey = finalStripeSecret
+        cachedStripePublishableKey = finalStripePub
+        refreshSecrets(updated)
+
+        val isGhConfigured = finalGithub.isNotBlank() && !finalGithub.startsWith("placeholder_")
+        val isStripeConfigured = finalStripeSecret.isNotBlank() && !finalStripeSecret.startsWith("placeholder_")
+        val isPubConfigured = finalStripePub.isNotBlank() && !finalStripePub.startsWith("placeholder_")
+
+        StoreSecretsImplementationResult(
+            isGitHubConfigured = isGhConfigured,
+            isStripeSecretConfigured = isStripeConfigured,
+            isStripePublishableConfigured = isPubConfigured,
+            githubMasked = maskSecret(finalGithub),
+            stripeSecretMasked = maskSecret(finalStripeSecret),
+            stripePublishableMasked = maskSecret(finalStripePub),
+            message = "Store Secrets Updated: GitHub (${if (isGhConfigured) "Configured" else "Unconfigured"}), Stripe Secret (${if (isStripeConfigured) "Configured" else "Unconfigured"}), Stripe Pub (${if (isPubConfigured) "Configured" else "Unconfigured"})"
+        )
+    }
+
+    /**
+     * Verifies the live Stripe secret key against Stripe's API.
+     */
+    suspend fun verifyStripeSecretKey(): Result<String> = withContext(Dispatchers.IO) {
+        val key = getStripeSecretKey()
+        if (key.isBlank()) return@withContext Result.failure(IllegalStateException("Stripe Secret Key is empty"))
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://api.stripe.com/v1/balance")
+            .header("Authorization", "Bearer $key")
+            .get()
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    Result.success("Stripe Connected • Live API Authenticated (HTTP 200)")
+                } else {
+                    Result.failure(IOException("Stripe Auth Failure (${response.code}): $body"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Verifies the live GitHub access token against GitHub's API.
+     */
+    suspend fun verifyGitHubToken(): Result<String> = withContext(Dispatchers.IO) {
+        val token = getGitHubToken()
+        if (token.isBlank()) return@withContext Result.failure(IllegalStateException("GitHub Token is empty"))
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://api.github.com/user")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .get()
+            .build()
+
+        try {
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    val json = Gson().fromJson(body, JsonObject::class.java)
+                    val login = json.get("login")?.asString ?: "connected"
+                    Result.success("GitHub Connected • Authenticated User: @$login")
+                } else {
+                    Result.failure(IOException("GitHub Auth Failure (${response.code}): $body"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**

@@ -412,12 +412,13 @@ data class AutonomousAgent(
             ),
             AutonomousAgent(
                 id = "4",
-                name = "POD Design Agent",
+                name = "Lead Autonomous Design Director AI",
                 role = OperationalRole.PRODUCT_DESIGNER_POD,
                 status = AgentStatus.ACTIVE,
                 modelEngine = "mistral:7b",
-                currentTask = "Generating 300 DPI vector artwork mockups",
-                capabilities = listOf("VECTOR_SYNTHESIS", "MOCKUP_MAPPING", "BLEED_VALIDATION")
+                systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
+                currentTask = "Engineering Kritical Limitz master-class 300 DPI luxury underground streetwear mockups",
+                capabilities = listOf("LUXURY_UNDERGROUND_POD", "VECTOR_SYNTHESIS", "MOCKUP_MAPPING", "BLEED_VALIDATION", "PENDING_STAGING_ENFORCEMENT")
             ),
             AutonomousAgent(
                 id = "5",

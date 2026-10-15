@@ -43,6 +43,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.opensource.autonomous.agent.data.AppDatabase
+import com.opensource.autonomous.agent.data.DecisionEntity
 import com.opensource.autonomous.agent.data.LedgerEntity
 import com.opensource.autonomous.agent.data.LogEntity
 import com.opensource.autonomous.agent.data.PodOrderEntity
@@ -123,12 +124,14 @@ data class ClipartPreset(
 )
 
 val CLIPART_PRESETS = listOf(
-    ClipartPreset("retro_mountain", "Retro Mountain Sun", "Outdoor", "#F59E0B"),
-    ClipartPreset("botanical_fern", "Botanical Fern Leaf", "Nature", "#10B981"),
-    ClipartPreset("cyber_crest", "Cyberpunk Hex Crest", "Streetwear", "#06B6D4"),
-    ClipartPreset("vintage_skull", "Rose & Vintage Skull", "Tattoo", "#EF4444"),
-    ClipartPreset("celestial_orbit", "Celestial Orbit", "Boho", "#8B5CF6"),
-    ClipartPreset("japanese_wave", "Vintage Wave", "Classic", "#3B82F6")
+    ClipartPreset("kl_payasa", "KL Fine-Line Payasa", "Chicano Streetwear", "#F8FAFC"),
+    ClipartPreset("kl_scarab", "Egyptian Scarab & Ankh", "Occult Luxury", "#F59E0B"),
+    ClipartPreset("kl_sigil", "Esoteric Satanic Sigil", "Dark Occult", "#EF4444"),
+    ClipartPreset("kl_paisley", "Dark Paisley & Barbed Wire", "Luxury Texture", "#A855F7"),
+    ClipartPreset("kl_hellhound", "Crowned Hellhound", "Underground Street", "#10B981"),
+    ClipartPreset("kl_gothic", "Kritical Limitz Monogram", "Signature Luxury", "#38BDF8"),
+    ClipartPreset("vintage_skull", "Rose & Vintage Skull", "Tattoo Fine-Line", "#EF4444"),
+    ClipartPreset("cyber_crest", "Cyberpunk Hex Crest", "Streetwear", "#06B6D4")
 )
 
 // ============================================================================
@@ -778,7 +781,7 @@ fun PodStudioDesktopWorkspace(
     var showAddLayerDialog by remember { mutableStateOf(false) }
 
     // State: AI Prompt Module
-    var aiPrompt by remember { mutableStateOf("Minimalist organic sunburst with desert saguaro line art") }
+    var aiPrompt by remember { mutableStateOf("Hyper-detailed fine-line black and grey illustration, custom gothic lettering 'Kritical Limitz', realistic portraiture with payasa makeup, lowrider chrome artifacts, and gritty urban textures. Master-Class contrast stippling, full back print. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]") }
     var isGeneratingAi by remember { mutableStateOf(false) }
     var aiStatusMessage by remember { mutableStateOf<String?>(null) }
 
@@ -832,9 +835,13 @@ fun PodStudioDesktopWorkspace(
             parsedLayersList = imagesList
 
             val printifyPayload = mapOf(
-                "title" to "Print Defy - ${selectedProduct.name}",
-                "description" to "Direct-to-garment vector placement engineered on ${selectedProduct.weight}.",
+                "title" to "Kritical Limitz (KL) - ${selectedProduct.name}",
+                "description" to "Direct-to-garment underground luxury streetwear vector placement engineered on ${selectedProduct.weight}.",
                 "sku" to computedSku,
+                "brand" to "Kritical Limitz",
+                "storefront_domain" to "kriticallimitz.printify.me",
+                "staging_status" to "PENDING_STAGING",
+                "staging_tag" to "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
                 "blueprint_id" to selectedProduct.blueprintId,
                 "print_provider_id" to 1,
                 "variants" to listOf(4201, 4202, 4203),
@@ -886,19 +893,19 @@ fun PodStudioDesktopWorkspace(
                     // Handled gracefully; local database insertion ensures zero downtime
                 }
 
-                // Insert into real Room database DAO directly
+                // Insert into real Room database DAO directly with PENDING_STAGING state
                 val now = System.currentTimeMillis()
                 val orderId = "pod-ord-" + UUID.randomUUID().toString().take(8)
                 val newOrder = PodOrderEntity(
                     id = orderId,
                     sku = computedSku,
-                    product = selectedProduct.name,
+                    product = "Kritical Limitz - ${selectedProduct.name}",
                     color = selectedColor.name,
                     placement = currentZone.name,
-                    status = "READY",
+                    status = "PENDING_STAGING",
                     progressPercent = 100,
                     vectorDpi = 300,
-                    customerEmail = "buyer@live.store",
+                    customerEmail = "ops@kriticallimitz.printify.me",
                     priceCents = selectedProduct.retailPriceCents,
                     payloadJson = formattedPrintifyPayload,
                     timestamp = now
@@ -907,14 +914,26 @@ fun PodStudioDesktopWorkspace(
                 val db = AppDatabase.getInstance(context)
                 db.podOrderDao().insertOrder(newOrder)
 
+                // Mandatory Operational Constraint: Queue into Human Approvals Decision Register
+                db.decisionDao().insertDecision(
+                    DecisionEntity(
+                        id = "dec-pod-" + UUID.randomUUID().toString().take(8),
+                        agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
+                        description = "Verify & Publish POD Design: '${selectedProduct.name}' ($computedSku) [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                        payloadJson = formattedPrintifyPayload,
+                        status = "PENDING",
+                        timestamp = now
+                    )
+                )
+
                 // Double-entry whole-cents Room ledger entry
                 db.ledgerDao().insertEntry(
                     LedgerEntity(
                         timestamp = now,
                         code = "LEDG-POD-" + UUID.randomUUID().toString().take(6).uppercase(),
-                        store = "Printify POD Pop-Up Store",
+                        store = "Kritical Limitz POD Pop-Up Store (kriticallimitz.printify.me)",
                         platform = "Printify Direct API",
-                        description = "Customer checkout: ${selectedProduct.name} ($computedSku)",
+                        description = "Staged POD product: ${selectedProduct.name} ($computedSku)",
                         accountDebit = "1020 Printify Settlement",
                         accountCredit = "4020 Merchandise Revenue",
                         amountCents = selectedProduct.retailPriceCents,
@@ -928,7 +947,7 @@ fun PodStudioDesktopWorkspace(
                     LedgerEntity(
                         timestamp = now,
                         code = "LEDG-COGS-" + UUID.randomUUID().toString().take(6).uppercase(),
-                        store = "Printify POD Pop-Up Store",
+                        store = "Kritical Limitz POD Pop-Up Store (kriticallimitz.printify.me)",
                         platform = "Monster Digital Fulfillment",
                         description = "Direct print & blank fulfillment cost: ${selectedProduct.name}",
                         accountDebit = "5010 Cost of Goods Sold",
@@ -941,8 +960,8 @@ fun PodStudioDesktopWorkspace(
 
                 db.logDao().insertLog(
                     LogEntity(
-                        agentId = "4",
-                        message = "Published live POD SKU $computedSku to Pop-Up Storefront. Ready for 300 DPI fulfillment.",
+                        agentId = "Lead Autonomous Design Director AI",
+                        message = "Kritical Limitz design held in PENDING STAGING: $computedSku. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
                         timestamp = now
                     )
                 )
@@ -952,10 +971,10 @@ fun PodStudioDesktopWorkspace(
                     PodJobItem(
                         id = orderId,
                         sku = computedSku,
-                        product = selectedProduct.name,
+                        product = "Kritical Limitz - ${selectedProduct.name}",
                         color = selectedColor.name,
                         placement = currentZone.name,
-                        status = "READY",
+                        status = "PENDING_STAGING",
                         progressPercent = 100,
                         vectorDpi = 300
                     )
@@ -964,8 +983,8 @@ fun PodStudioDesktopWorkspace(
                 withContext(Dispatchers.Main) {
                     isPublishing = false
                     val profitDollars = String.format("%.2f", (selectedProduct.retailPriceCents - selectedProduct.cogsCents) / 100.0)
-                    publishSuccessBanner = "Published live! SKU: $computedSku (Profit: +$$profitDollars)"
-                    Toast.makeText(context, "Published live to Pop-Up Storefront!", Toast.LENGTH_SHORT).show()
+                    publishSuccessBanner = "Staged in PENDING STAGING! SKU: $computedSku (Profit: +$$profitDollars) [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+                    Toast.makeText(context, "Staged in PENDING STAGING for Human Review!", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -1456,7 +1475,6 @@ fun MobileDesignerWorkspace(
                                 settings.apply {
                                     javaScriptEnabled = true
                                     domStorageEnabled = true
-                                    databaseEnabled = true
                                     loadWithOverviewMode = true
                                     useWideViewPort = true
                                     cacheMode = WebSettings.LOAD_DEFAULT
@@ -1966,16 +1984,69 @@ fun MobileAddDesignTabContent(
         }
 
         // AI Mockup Prompt Formulation Engine
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color(0xFF8B5CF6).copy(alpha = 0.15f),
+            border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "LEAD AUTONOMOUS DESIGN DIRECTOR AI",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFA78BFA)
+                    )
+                }
+                Text(
+                    text = "Kritical Limitz (KL) • Luxury Underground POD Brand",
+                    fontSize = 9.sp,
+                    color = if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFF475569)
+                )
+            }
+        }
+
         Text(
-            text = "AI VECTOR MOCKUP GENERATOR",
-            fontSize = 11.sp,
+            text = "THEMATIC PILLARS (TAP TO FORMULATE):",
+            fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf(
+                "Chicano Street" to "Hyper-detailed fine-line black and grey illustration, custom gothic lettering 'Kritical Limitz', realistic portraiture with payasa makeup, lowrider chrome artifacts, and gritty urban textures. Master-Class contrast stippling, full back print. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                "Dark Occult Sigil" to "Dark occult surrealism, intricate pentagram and satanic sigils, demonic horned skull bound in barbed wire, deep ink-bleeding shadows, 3D realism on black streetwear blank. Master-Class execution. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                "Egyptian Mysticism" to "Luxury Egyptian mysticism streetwear graphic, hyper-detailed scarab beetle with outstretched wings, golden Ankh, Eye of Horus, surrounded by ancient hieroglyphic script and KL monogram. Dramatic lighting. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                "Paisley & Barbed Wire" to "Deeply intricate paisley seamless pattern infused with razor barbed wire, brass knuckles, spiked crown, visceral splatter ink dynamics, high contrast luxury underground streetwear. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+            ).forEach { (pillarName, pillarPrompt) ->
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                    border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f)),
+                    modifier = Modifier.clickable { onAiPromptChange(pillarPrompt) }
+                ) {
+                    Text(
+                        text = pillarName,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFA78BFA),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
         OutlinedTextField(
             value = aiPrompt,
             onValueChange = onAiPromptChange,
-            label = { Text("AI Visual Formulation Prompt", fontSize = 11.sp) },
+            label = { Text("Master Prompt Payload", fontSize = 11.sp) },
             modifier = Modifier.fillMaxWidth().testTag("ai_mockup_prompt_input")
         )
         Button(
@@ -2064,6 +2135,27 @@ fun MobilePayloadTabContent(
             )
         }
 
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color(0xFFF59E0B).copy(alpha = 0.12f),
+            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = "HARD BOUNDARY: NO UNAUTHORIZED STOREFRONT PUBLISHING",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF59E0B)
+                )
+                Text(
+                    text = "Designs are held in PENDING STAGING. Requires human administrator verification.\n[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                    fontSize = 9.sp,
+                    color = Color(0xFFE2E8F0)
+                )
+            }
+        }
+
         Button(
             onClick = onPublish,
             enabled = !isPublishing,
@@ -2073,11 +2165,11 @@ fun MobilePayloadTabContent(
             if (isPublishing) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Syncing with Room Ledger & Pop-Up Store...")
+                Text("Staging in Room Database...")
             } else {
-                Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFFFDE047))
+                Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Publish Live to Pop-Up Storefront", fontWeight = FontWeight.Bold)
+                Text("Stage Design (Awaiting Human Approval)", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2228,7 +2320,7 @@ fun LifestyleMockupPreviewView(
             }
         }
 
-        // Direct Publish Button
+        // Direct Staging Button
         Button(
             onClick = onPublish,
             enabled = !isPublishing,
@@ -2241,11 +2333,11 @@ fun LifestyleMockupPreviewView(
             if (isPublishing) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Publishing Live Order...")
+                Text("Staging Mockup in Database...")
             } else {
-                Icon(Icons.Default.RocketLaunch, contentDescription = null)
+                Icon(Icons.Default.VerifiedUser, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Publish Live to Pop-Up Storefront", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Stage Design (Awaiting Human Approval)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2324,7 +2416,6 @@ fun DesktopDualPaneWorkspace(
                             settings.apply {
                                 javaScriptEnabled = true
                                 domStorageEnabled = true
-                                databaseEnabled = true
                                 loadWithOverviewMode = true
                                 useWideViewPort = true
                                 cacheMode = WebSettings.LOAD_DEFAULT
@@ -2354,25 +2445,88 @@ fun DesktopDualPaneWorkspace(
             }
         }
 
-        // Right Controls (300dp)
+        // Right Controls (320dp) with full multi-tab workflow
+        var desktopRightTab by remember { mutableStateOf(PodMobileStudioTab.LAYERS) }
         Column(
             modifier = Modifier
-                .width(300.dp)
+                .width(320.dp)
                 .fillMaxHeight()
                 .background(if (isDarkTheme) Color(0xFF1E293B) else Color.White)
                 .border(BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)))
-                .padding(14.dp)
+                .padding(12.dp)
         ) {
-            MobileLayersTabContent(
-                layers = parsedLayers,
-                selectedLayerId = selectedLayerId,
-                onSelectLayer = { id -> webViewRef?.evaluateJavascript("window.selectLayer('$id');", null) },
-                onToggleVisibility = { id, vis -> webViewRef?.evaluateJavascript("window.toggleLayer('$id', $vis);", null) },
-                onReorder = { id, dir -> webViewRef?.evaluateJavascript("window.reorderLayer('$id', '$dir');", null) },
-                onDelete = { id -> webViewRef?.evaluateJavascript("window.removeLayer('$id');", null) },
-                onAddText = onAddCustomText,
-                isDarkTheme = isDarkTheme
-            )
+            // Tab Header Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9), RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                listOf(
+                    PodMobileStudioTab.LAYERS to "Layers",
+                    PodMobileStudioTab.ADD_DESIGN to "Add/AI",
+                    PodMobileStudioTab.PAYLOAD to "Payload"
+                ).forEach { (tab, label) ->
+                    val isSelected = desktopRightTab == tab
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isSelected) Color(0xFF2563EB) else Color.Transparent)
+                            .clickable { desktopRightTab = tab }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) Color.White else (if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B))
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            when (desktopRightTab) {
+                PodMobileStudioTab.LAYERS -> {
+                    MobileLayersTabContent(
+                        layers = parsedLayers,
+                        selectedLayerId = selectedLayerId,
+                        onSelectLayer = { id -> webViewRef?.evaluateJavascript("window.selectLayer('$id');", null) },
+                        onToggleVisibility = { id, vis -> webViewRef?.evaluateJavascript("window.toggleLayer('$id', $vis);", null) },
+                        onReorder = { id, dir -> webViewRef?.evaluateJavascript("window.reorderLayer('$id', '$dir');", null) },
+                        onDelete = { id -> webViewRef?.evaluateJavascript("window.removeLayer('$id');", null) },
+                        onAddText = onAddCustomText,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
+                PodMobileStudioTab.ADD_DESIGN -> {
+                    MobileAddDesignTabContent(
+                        onAddCustomText = onAddCustomText,
+                        onAddPreset = onAddPreset,
+                        aiPrompt = aiPrompt,
+                        onAiPromptChange = onAiPromptChange,
+                        isGeneratingAi = isGeneratingAi,
+                        onGenerateAi = onGenerateAi,
+                        aiStatusMessage = aiStatusMessage,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
+                PodMobileStudioTab.PAYLOAD -> {
+                    MobilePayloadTabContent(
+                        payloadJson = formattedPayload,
+                        onPublish = onPublish,
+                        isPublishing = isPublishing,
+                        product = selectedProduct,
+                        color = selectedColor,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
+                else -> {}
+            }
         }
     }
 }

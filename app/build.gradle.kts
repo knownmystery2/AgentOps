@@ -111,8 +111,8 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.converter.gson)
-  implementation(libs.firebase.ai)
-  implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+  // implementation(libs.firebase.ai)
+  // Generative AI implemented via Direct REST API (OkHttp / Retrofit) to avoid Ktor runtime conflicts
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
