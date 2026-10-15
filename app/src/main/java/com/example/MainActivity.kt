@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
 enum class ScreenTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     CONSOLE("Console", Icons.Default.Dashboard),
+    TRANSACTIONS("Transactions", Icons.Default.FactCheck),
     OVERSEER("Overseer", Icons.Default.Shield),
     APPROVALS("Approvals", Icons.Default.PendingActions),
     POD("POD Studio", Icons.Default.Palette),
@@ -119,6 +120,10 @@ fun AgentOpsMainApp(viewModel: MainViewModel) {
                     onNavigateToLedger = { currentTab = ScreenTab.LEDGER },
                     onNavigateToStandby = { currentTab = ScreenTab.STANDBY },
                     onNavigateToMockupStudio = { currentTab = ScreenTab.POD }
+                )
+                ScreenTab.TRANSACTIONS -> PendingTransactionsScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { currentTab = ScreenTab.CONSOLE }
                 )
                 ScreenTab.OVERSEER -> GodOverseerScreen(
                     viewModel = viewModel

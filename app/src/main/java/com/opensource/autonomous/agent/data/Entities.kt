@@ -310,3 +310,25 @@ data class DesignLayer(
     val fontStyle: String = "SANS_SERIF",
     val graphicPreset: String = "retro_mountain"
 )
+
+// Pending Transaction Entity requiring manual user approval / review
+@Entity(tableName = "pending_transactions")
+data class PendingTransactionEntity(
+    @PrimaryKey val id: String,
+    val transactionCode: String,
+    val title: String,
+    val description: String,
+    val storeOrEntity: String = "Print Defy Studio",
+    val platform: String = "Printify Gateway",
+    val vendorOrPayee: String = "Printify Global",
+    val accountDebit: String = "5010 Cost of Goods Sold",
+    val accountCredit: String = "1010 Operating Cash",
+    val amountCents: Long = 0L,
+    val category: String = "COGS", // COGS, PAYOUT, VENDOR_EXPENSE, REFUND, SALE
+    val riskScore: Int = 12, // 0 - 100
+    val riskReason: String = "Automated clearance: verified double-entry balance.",
+    val status: String = "PENDING", // PENDING, APPROVED, REJECTED
+    val createdAt: Long = System.currentTimeMillis(),
+    val reviewedAt: Long? = null
+)
+

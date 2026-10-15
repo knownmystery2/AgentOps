@@ -309,5 +309,92 @@ class AgentRepository(
     suspend fun clearGodVerdicts() = withContext(Dispatchers.IO) {
         db.godAuditDao().clearVerdicts()
     }
+
+    // -------------------------------------------------------------
+    // Pending Transactions (Approval / Rejection) Methods
+    // -------------------------------------------------------------
+    fun getPendingTransactions(): Flow<List<PendingTransactionEntity>> =
+        db.pendingTransactionDao().getPendingTransactions()
+
+    fun getAllTransactions(): Flow<List<PendingTransactionEntity>> =
+        db.pendingTransactionDao().getAllTransactions()
+
+    suspend fun insertPendingTransaction(transaction: PendingTransactionEntity) = withContext(Dispatchers.IO) {
+        db.pendingTransactionDao().insertTransaction(transaction)
+        db.logDao().insertLog(
+            LogEntity(
+                agentId = "Finance Agent",
+                message = "New transaction registered for approval: ${transaction.transactionCode} ($${transaction.amountCents / 100.0}) - ${transaction.title}",
+                timestamp = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun approvePendingTransaction(id: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val tx = db.pendingTransactionDao().getTransactionById(id)
+                ?: return@withContext Result.failure(IllegalArgumentException("Transaction $id not found"))
+
+            val now = System.currentTimeMillis()
+            db.pendingTransactionDao().updateTransactionStatus(id, "APPROVED", now)
+
+            // Auto-post into double-entry ledger so balances reconcile
+            db.ledgerDao().insertEntry(
+                LedgerEntity(
+                    timestamp = now,
+                    code = tx.transactionCode,
+                    store = tx.storeOrEntity,
+                    platform = tx.platform,
+                    description = "Approved: ${tx.title} - ${tx.vendorOrPayee}",
+                    accountDebit = tx.accountDebit,
+                    accountCredit = tx.accountCredit,
+                    amountCents = tx.amountCents,
+                    hashToken = "0x" + java.util.UUID.randomUUID().toString().take(12),
+                    category = tx.category
+                )
+            )
+
+            db.logDao().insertLog(
+                LogEntity(
+                    agentId = "Finance Agent",
+                    message = "Transaction APPROVED: ${tx.transactionCode} ($${tx.amountCents / 100.0}) posted to Room ledger.",
+                    timestamp = now
+                )
+            )
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun rejectPendingTransaction(id: String, reason: String? = null): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val tx = db.pendingTransactionDao().getTransactionById(id)
+                ?: return@withContext Result.failure(IllegalArgumentException("Transaction $id not found"))
+
+            val now = System.currentTimeMillis()
+            db.pendingTransactionDao().updateTransactionStatus(id, "REJECTED", now)
+
+            db.logDao().insertLog(
+                LogEntity(
+                    agentId = "Compliance Agent",
+                    message = "Transaction REJECTED: ${tx.transactionCode}. Reason: ${reason ?: "Authorization denied by user."}",
+                    timestamp = now
+                )
+            )
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun batchApproveTransactions(ids: List<String>) = withContext(Dispatchers.IO) {
+        ids.forEach { approvePendingTransaction(it) }
+    }
+
+    suspend fun batchRejectTransactions(ids: List<String>, reason: String? = null) = withContext(Dispatchers.IO) {
+        ids.forEach { rejectPendingTransaction(it, reason) }
+    }
 }
+
 

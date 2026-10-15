@@ -598,7 +598,7 @@ Respond strictly in JSON adhering to the specified schema.
                 title = "Generate 300 DPI Vector Placement Mockup",
                 category = "POD_MOCKUP",
                 assignedAgentId = "4",
-                assignedAgentRole = "Lead Autonomous Design Director AI",
+                assignedAgentRole = "Creative Design Agent",
                 priority = "HIGH",
                 detailedInstruction = "Engineer Kritical Limitz master-class luxury underground streetwear mockup (Chicano fine-line black & grey, dark occult sigils, luxury Egyptian mysticism, paisley texturing). Include Title, Master Prompt, Placement Matrix (Center Chest 11\" x 13\"), and staging tag '[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]' held in PENDING STAGING.",
                 estimatedMarginPercent = 48,

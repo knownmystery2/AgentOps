@@ -1,54 +1,40 @@
 package com.opensource.autonomous.agent.ui.screens
 
-import android.annotation.SuppressLint
-import android.os.Handler
-import android.os.Looper
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
-import com.opensource.autonomous.agent.data.AppDatabase
-import com.opensource.autonomous.agent.data.DecisionEntity
-import com.opensource.autonomous.agent.data.LedgerEntity
-import com.opensource.autonomous.agent.data.LogEntity
-import com.opensource.autonomous.agent.data.PodOrderEntity
+import com.opensource.autonomous.agent.data.*
 import com.opensource.autonomous.agent.network.PodJobItem
 import com.opensource.autonomous.agent.ui.MainViewModel
+import com.opensource.autonomous.agent.ui.pod.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,85 +44,14 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 
-// ============================================================================
-// DATA MODELS & CATALOG STRUCTURES (Printify Industry Standard)
-// ============================================================================
+// Backward compatibility typealiases
+typealias DesktopProductBlank = PrintifyProductBlank
+typealias DesktopColorSwatch = PrintifyColorSwatch
+typealias DesktopPrintZone = PrintifyPrintZone
 
-data class DesktopProductBlank(
-    val id: String,
-    val name: String,
-    val category: String,
-    val weight: String,
-    val baseSku: String,
-    val blueprintId: String,
-    val silhouetteType: String,
-    val retailPriceCents: Long = 2900L,
-    val cogsCents: Long = 1250L
-)
-
-data class DesktopColorSwatch(
-    val id: String,
-    val name: String,
-    val hex: String,
-    val isLightText: Boolean
-)
-
-data class DesktopPrintZone(
-    val id: String,
-    val name: String,
-    val skuCode: String,
-    val widthPx: Int,
-    val heightPx: Int,
-    val dimensionLabel: String
-)
-
-val DESKTOP_CATALOG = listOf(
-    DesktopProductBlank("heavyweight-tshirt", "Heavyweight T-Shirt", "Apparel", "240 GSM Organic Cotton", "POD-HET", "384", "tshirt", 2900L, 1250L),
-    DesktopProductBlank("vintage-hoodie", "Vintage Hoodie", "Apparel", "380 GSM Heavy Fleece", "POD-HOD", "412", "hoodie", 4800L, 2200L),
-    DesktopProductBlank("ceramic-mug", "Ceramic Mug", "Drinkware", "11 oz Glossy Ceramic", "POD-MUG", "68", "mug", 1800L, 650L),
-    DesktopProductBlank("canvas-tote", "Canvas Tote Bag", "Accessories", "100% Bull Denim", "POD-TOT", "29", "tote", 2400L, 950L),
-    DesktopProductBlank("wall-art-poster", "Wall Art Poster", "Home Decor", "250 GSM Archival Matte", "POD-PST", "12", "poster", 2200L, 700L)
-)
-
-val DESKTOP_SWATCHES = listOf(
-    DesktopColorSwatch("dark-slate", "Charcoal Slate", "#262E3D", true),
-    DesktopColorSwatch("pitch-black", "Pitch Black", "#121417", true),
-    DesktopColorSwatch("classic-white", "Crisp White", "#FFFFFF", false),
-    DesktopColorSwatch("cream", "Cream Natural", "#F5EBE6", false),
-    DesktopColorSwatch("forest-green", "Forest Green", "#1A331E", true),
-    DesktopColorSwatch("terracotta", "Terracotta Sand", "#C27648", true),
-    DesktopColorSwatch("navy-indigo", "Navy Indigo", "#1E293B", true),
-    DesktopColorSwatch("dark-teal", "Dark Teal", "#0D5C53", true)
-)
-
-val DESKTOP_ZONES = mapOf(
-    "chest" to DesktopPrintZone("chest", "Front Chest", "CHSL", 240, 280, "11\" × 13\" Print Area"),
-    "pocket" to DesktopPrintZone("pocket", "Pocket Left", "PKTL", 100, 100, "4\" × 4\" Pocket"),
-    "back" to DesktopPrintZone("back", "Back Large", "BCKL", 240, 300, "14\" × 16\" Large Back")
-)
-
-// Preset graphics catalog for instant clipart insertion
-data class ClipartPreset(
-    val id: String,
-    val title: String,
-    val category: String,
-    val color: String
-)
-
-val CLIPART_PRESETS = listOf(
-    ClipartPreset("kl_payasa", "KL Fine-Line Payasa", "Chicano Streetwear", "#F8FAFC"),
-    ClipartPreset("kl_scarab", "Egyptian Scarab & Ankh", "Occult Luxury", "#F59E0B"),
-    ClipartPreset("kl_sigil", "Esoteric Satanic Sigil", "Dark Occult", "#EF4444"),
-    ClipartPreset("kl_paisley", "Dark Paisley & Barbed Wire", "Luxury Texture", "#A855F7"),
-    ClipartPreset("kl_hellhound", "Crowned Hellhound", "Underground Street", "#10B981"),
-    ClipartPreset("kl_gothic", "Kritical Limitz Monogram", "Signature Luxury", "#38BDF8"),
-    ClipartPreset("vintage_skull", "Rose & Vintage Skull", "Tattoo Fine-Line", "#EF4444"),
-    ClipartPreset("cyber_crest", "Cyberpunk Hex Crest", "Streetwear", "#06B6D4")
-)
-
-// ============================================================================
-// AUTO-SCALING ENGINE & COORDINATE MAPPER
-// ============================================================================
+val DESKTOP_CATALOG: List<PrintifyProductBlank> = PRINTIFY_CATALOG
+val DESKTOP_SWATCHES: List<PrintifyColorSwatch> = PRINTIFY_SWATCHES
+val DESKTOP_ZONES: Map<String, PrintifyPrintZone> = PRINTIFY_ZONES
 
 object PodAutoScaler {
     enum class ScalingMode {
@@ -148,614 +63,25 @@ object PodAutoScaler {
     }
 }
 
-// ============================================================================
-// DYNAMIC SERVER ENDPOINT RESOLUTION WITH AUTOMATIC FALLBACK
-// ============================================================================
-
-suspend fun resolveActiveServerEndpoint(configuredUrl: String? = null, client: OkHttpClient): String = withContext(Dispatchers.IO) {
-    val candidates = listOfNotNull(
-        configuredUrl?.takeIf { it.isNotBlank() },
-        "http://127.0.0.1:8080",
-        "http://10.0.2.2:8080",
-        "http://localhost:8080"
-    ).distinct()
-
-    for (candidate in candidates) {
-        try {
-            val req = Request.Builder()
-                .url("$candidate/api/status")
-                .get()
-                .build()
-            client.newCall(req).execute().use { response ->
-                if (response.isSuccessful) {
-                    return@withContext candidate
-                }
-            }
-        } catch (_: Exception) {
-            // try next candidate
-        }
-    }
-    configuredUrl?.takeIf { it.isNotBlank() } ?: "http://127.0.0.1:8080"
+enum class PodWorkspaceMode(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    DESIGN("Studio Canvas", Icons.Default.Brush),
+    LIFESTYLE_3D("3D Lifestyle", Icons.Default.ViewInAr),
+    CATALOG("Printify Catalog", Icons.Default.Inventory2),
+    API_TELEMETRY("API / Sync", Icons.Default.CloudSync)
 }
 
-// ============================================================================
-// JAVASCRIPT BRIDGE INTERFACE WITH MAIN THREAD DISPATCH
-// ============================================================================
-
-class PodFabricBridge(
-    private val onPayloadUpdated: (String) -> Unit,
-    private val onLayerSelected: (String) -> Unit
-) {
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    @JavascriptInterface
-    fun postMessage(payloadJson: String) {
-        mainHandler.post {
-            onPayloadUpdated(payloadJson)
-        }
-    }
-
-    @JavascriptInterface
-    fun onSelectLayer(layerId: String) {
-        mainHandler.post {
-            onLayerSelected(layerId)
-        }
-    }
-}
-
-// ============================================================================
-// HTML + FABRIC.JS CANVAS GENERATOR WITH INSTANT LOCAL 2D CANVAS FALLBACK
-// ============================================================================
-
-fun generateFabricHtml(zoneWidth: Int, zoneHeight: Int): String {
-    return """
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-        }
-        #canvas-wrapper {
-            position: relative;
-            width: ${zoneWidth}px;
-            height: ${zoneHeight}px;
-            background: transparent;
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
-    <!-- Fabric.js Vector Canvas Engine with Fast Loading -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-</head>
-<body>
-    <div id="canvas-wrapper">
-        <canvas id="pod-canvas" width="${zoneWidth}" height="${zoneHeight}"></canvas>
-    </div>
-
-    <script>
-        var canvas;
-        var currentZoneWidth = ${zoneWidth};
-        var currentZoneHeight = ${zoneHeight};
-        var layersMap = {};
-        var isFabricMode = false;
-        var fallbackLayers = [];
-        var activeFallbackId = 'layer_circle';
-
-        function emitTelemetry() {
-            var layers = [];
-            if (isFabricMode && canvas) {
-                var objects = canvas.getObjects();
-                layers = objects.map(function(obj, idx) {
-                    var bound = obj.getBoundingRect(true);
-                    return {
-                        id: obj.dataId || ('layer_' + (idx + 1)),
-                        name: obj.dataName || obj.type,
-                        type: obj.type,
-                        visible: obj.visible !== false,
-                        x: Math.round(obj.left || 0),
-                        y: Math.round(obj.top || 0),
-                        scale_x: Number((obj.scaleX || 1).toFixed(3)),
-                        scale_y: Number((obj.scaleY || 1).toFixed(3)),
-                        angle: Math.round(obj.angle || 0),
-                        normalized_x: Number(((obj.left || 0) / currentZoneWidth).toFixed(4)),
-                        normalized_y: Number(((obj.top || 0) / currentZoneHeight).toFixed(4)),
-                        bound_w: Math.round(bound.width),
-                        bound_h: Math.round(bound.height)
-                    };
-                });
-            } else {
-                layers = fallbackLayers.map(function(l) {
-                    return {
-                        id: l.id,
-                        name: l.name,
-                        type: l.type,
-                        visible: l.visible,
-                        x: Math.round(l.x),
-                        y: Math.round(l.y),
-                        scale_x: Number(l.scale.toFixed(3)),
-                        scale_y: Number(l.scale.toFixed(3)),
-                        angle: Math.round(l.angle),
-                        normalized_x: Number((l.x / currentZoneWidth).toFixed(4)),
-                        normalized_y: Number((l.y / currentZoneHeight).toFixed(4)),
-                        bound_w: Math.round(l.w * l.scale),
-                        bound_h: Math.round(l.h * l.scale)
-                    };
-                });
-            }
-
-            var payload = {
-                width: currentZoneWidth,
-                height: currentZoneHeight,
-                dpi: 300,
-                layers: layers
-            };
-
-            if (window.PodBridge && window.PodBridge.postMessage) {
-                window.PodBridge.postMessage(JSON.stringify(payload));
-            }
-        }
-
-        // --- Standard Local HTML5 2D Fallback Engine ---
-        function initFallback2D() {
-            var cvs = document.getElementById('pod-canvas');
-            if (!cvs) return;
-            var ctx = cvs.getContext('2d');
-            isFabricMode = false;
-
-            if (fallbackLayers.length === 0) {
-                fallbackLayers = [
-                    {
-                        id: 'layer_circle',
-                        name: 'Vector Base Circle',
-                        type: 'circle',
-                        x: currentZoneWidth / 2,
-                        y: currentZoneHeight / 2 - 28,
-                        r: 44,
-                        w: 88,
-                        h: 88,
-                        scale: 1.0,
-                        angle: 0,
-                        fill: '#FFFFFF',
-                        visible: true
-                    },
-                    {
-                        id: 'layer_text',
-                        name: 'Typography Subtitle',
-                        type: 'text',
-                        text: 'ORIGINAL VINTAGE',
-                        x: currentZoneWidth / 2,
-                        y: currentZoneHeight / 2 + 40,
-                        w: 120,
-                        h: 24,
-                        scale: 1.0,
-                        angle: 0,
-                        fill: '#FFFFFF',
-                        visible: true
-                    }
-                ];
-            }
-
-            function render2D() {
-                ctx.clearRect(0, 0, currentZoneWidth, currentZoneHeight);
-                fallbackLayers.forEach(function(l) {
-                    if (!l.visible) return;
-                    ctx.save();
-                    ctx.translate(l.x, l.y);
-                    ctx.rotate((l.angle * Math.PI) / 180);
-                    ctx.scale(l.scale, l.scale);
-
-                    if (l.type === 'circle') {
-                        ctx.beginPath();
-                        ctx.arc(0, 0, l.r, 0, Math.PI * 2);
-                        ctx.fillStyle = l.fill;
-                        ctx.fill();
-                    } else if (l.type === 'text') {
-                        ctx.font = 'bold 15px -apple-system, sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillStyle = l.fill;
-                        ctx.fillText(l.text, 0, 0);
-                    } else if (l.type === 'preset') {
-                        ctx.fillStyle = l.fill;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, 36, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.font = 'bold 10px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(l.name.substring(0, 8), 0, 3);
-                    }
-
-                    if (l.id === activeFallbackId) {
-                        ctx.strokeStyle = '#2563EB';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(-l.w / 2 - 4, -l.h / 2 - 4, l.w + 8, l.h + 8);
-                    }
-                    ctx.restore();
-                });
-            }
-
-            window.renderFallback2D = render2D;
-            render2D();
-            emitTelemetry();
-        }
-
-        function initFabric() {
-            if (typeof fabric === 'undefined') {
-                initFallback2D();
-                return;
-            }
-
-            try {
-                isFabricMode = true;
-                canvas = new fabric.Canvas('pod-canvas', {
-                    width: currentZoneWidth,
-                    height: currentZoneHeight,
-                    selection: true,
-                    preserveObjectStacking: true,
-                    backgroundColor: 'transparent'
-                });
-
-                var clipRect = new fabric.Rect({
-                    left: 0,
-                    top: 0,
-                    width: currentZoneWidth,
-                    height: currentZoneHeight,
-                    absolutePositioned: true
-                });
-                canvas.clipPath = clipRect;
-
-                var circleLayer = new fabric.Circle({
-                    radius: currentZoneWidth > 150 ? 48 : 26,
-                    fill: '#FFFFFF',
-                    left: currentZoneWidth / 2,
-                    top: currentZoneWidth > 150 ? (currentZoneHeight / 2 - 28) : (currentZoneHeight / 2 - 14),
-                    originX: 'center',
-                    originY: 'center',
-                    cornerColor: '#2563eb',
-                    cornerSize: 10,
-                    transparentCorners: false
-                });
-                circleLayer.dataId = 'layer_circle';
-                circleLayer.dataName = 'Vector Base Circle';
-                canvas.add(circleLayer);
-                layersMap['layer_circle'] = circleLayer;
-
-                var textLayer = new fabric.Text('ORIGINAL VINTAGE', {
-                    fontSize: currentZoneWidth > 150 ? 15 : 9,
-                    fontFamily: 'sans-serif',
-                    fontWeight: 'bold',
-                    fill: '#FFFFFF',
-                    left: currentZoneWidth / 2,
-                    top: currentZoneWidth > 150 ? (currentZoneHeight / 2 + 42) : (currentZoneHeight / 2 + 20),
-                    originX: 'center',
-                    originY: 'center',
-                    cornerColor: '#2563eb',
-                    cornerSize: 10,
-                    transparentCorners: false,
-                    charSpacing: 60
-                });
-                textLayer.dataId = 'layer_text';
-                textLayer.dataName = 'Typography Subtitle';
-                canvas.add(textLayer);
-                layersMap['layer_text'] = textLayer;
-
-                canvas.setActiveObject(circleLayer);
-                canvas.renderAll();
-
-                canvas.on('object:modified', emitTelemetry);
-                canvas.on('object:moving', emitTelemetry);
-                canvas.on('object:scaling', emitTelemetry);
-                canvas.on('object:rotating', emitTelemetry);
-                canvas.on('selection:created', function(e) {
-                    if (e.selected && e.selected[0] && window.PodBridge) {
-                        window.PodBridge.onSelectLayer(e.selected[0].dataId || 'layer');
-                    }
-                    emitTelemetry();
-                });
-                canvas.on('selection:updated', function(e) {
-                    if (e.selected && e.selected[0] && window.PodBridge) {
-                        window.PodBridge.onSelectLayer(e.selected[0].dataId || 'layer');
-                    }
-                    emitTelemetry();
-                });
-
-                emitTelemetry();
-            } catch (err) {
-                initFallback2D();
-            }
-        }
-
-        // --- Global Methods (Unified for both Fabric and 2D Engine) ---
-
-        window.autoScaleActive = function(mode) {
-            if (isFabricMode && canvas) {
-                var active = canvas.getActiveObject() || canvas.getObjects()[0];
-                if (!active) return;
-                var bound = active.getBoundingRect(true);
-
-                if (mode === 'CENTER_XY') {
-                    active.set({
-                        left: currentZoneWidth / 2,
-                        top: currentZoneHeight / 2,
-                        originX: 'center',
-                        originY: 'center'
-                    });
-                } else if (mode === 'FIT_SAFE_90') {
-                    var maxW = currentZoneWidth * 0.90;
-                    var maxH = currentZoneHeight * 0.90;
-                    var currentW = bound.width / (active.scaleX || 1);
-                    var currentH = bound.height / (active.scaleY || 1);
-                    var s = Math.min(maxW / currentW, maxH / currentH);
-                    active.set({
-                        scaleX: s,
-                        scaleY: s,
-                        left: currentZoneWidth / 2,
-                        top: currentZoneHeight / 2,
-                        originX: 'center',
-                        originY: 'center'
-                    });
-                } else if (mode === 'FIT_WIDTH') {
-                    var maxW = currentZoneWidth * 0.92;
-                    var currentW = bound.width / (active.scaleX || 1);
-                    var s = maxW / currentW;
-                    active.set({
-                        scaleX: s,
-                        scaleY: s,
-                        left: currentZoneWidth / 2,
-                        top: currentZoneHeight / 2,
-                        originX: 'center',
-                        originY: 'center'
-                    });
-                } else if (mode === 'FIT_HEIGHT') {
-                    var maxH = currentZoneHeight * 0.92;
-                    var currentH = bound.height / (active.scaleY || 1);
-                    var s = maxH / currentH;
-                    active.set({
-                        scaleX: s,
-                        scaleY: s,
-                        left: currentZoneWidth / 2,
-                        top: currentZoneHeight / 2,
-                        originX: 'center',
-                        originY: 'center'
-                    });
-                } else if (mode === 'RESET_NORMAL') {
-                    active.set({
-                        scaleX: 1.0,
-                        scaleY: 1.0,
-                        angle: 0,
-                        left: currentZoneWidth / 2,
-                        top: currentZoneHeight / 2,
-                        originX: 'center',
-                        originY: 'center'
-                    });
-                }
-                active.setCoords();
-                canvas.renderAll();
-                emitTelemetry();
-            } else {
-                var target = fallbackLayers.find(function(l) { return l.id === activeFallbackId }) || fallbackLayers[0];
-                if (!target) return;
-                if (mode === 'CENTER_XY') {
-                    target.x = currentZoneWidth / 2;
-                    target.y = currentZoneHeight / 2;
-                } else if (mode === 'FIT_SAFE_90') {
-                    target.scale = (currentZoneWidth * 0.9) / Math.max(target.w, 1);
-                    target.x = currentZoneWidth / 2;
-                    target.y = currentZoneHeight / 2;
-                } else if (mode === 'RESET_NORMAL') {
-                    target.scale = 1.0;
-                    target.angle = 0;
-                    target.x = currentZoneWidth / 2;
-                    target.y = currentZoneHeight / 2;
-                }
-                if (window.renderFallback2D) window.renderFallback2D();
-                emitTelemetry();
-            }
-        };
-
-        window.selectLayer = function(layerId) {
-            activeFallbackId = layerId;
-            if (isFabricMode && canvas) {
-                var target = layersMap[layerId];
-                if (target) {
-                    canvas.setActiveObject(target);
-                    canvas.renderAll();
-                }
-            } else {
-                if (window.renderFallback2D) window.renderFallback2D();
-            }
-            emitTelemetry();
-        };
-
-        window.toggleLayer = function(layerId, isVisible) {
-            if (isFabricMode && canvas) {
-                var target = layersMap[layerId];
-                if (target) {
-                    target.set('visible', isVisible);
-                    canvas.renderAll();
-                }
-            } else {
-                var target = fallbackLayers.find(function(l) { return l.id === layerId });
-                if (target) target.visible = isVisible;
-                if (window.renderFallback2D) window.renderFallback2D();
-            }
-            emitTelemetry();
-        };
-
-        window.reorderLayer = function(layerId, dir) {
-            if (isFabricMode && canvas) {
-                var target = layersMap[layerId];
-                if (target) {
-                    if (dir === 'UP') canvas.bringForward(target);
-                    else canvas.sendBackwards(target);
-                    canvas.renderAll();
-                }
-            } else {
-                var idx = fallbackLayers.findIndex(function(l) { return l.id === layerId });
-                if (idx !== -1) {
-                    var item = fallbackLayers.splice(idx, 1)[0];
-                    var newIdx = dir === 'UP' ? Math.min(fallbackLayers.length, idx + 1) : Math.max(0, idx - 1);
-                    fallbackLayers.splice(newIdx, 0, item);
-                    if (window.renderFallback2D) window.renderFallback2D();
-                }
-            }
-            emitTelemetry();
-        };
-
-        window.removeLayer = function(layerId) {
-            if (isFabricMode && canvas) {
-                var target = layersMap[layerId];
-                if (target) {
-                    canvas.remove(target);
-                    delete layersMap[layerId];
-                    canvas.renderAll();
-                }
-            } else {
-                fallbackLayers = fallbackLayers.filter(function(l) { return l.id !== layerId });
-                if (window.renderFallback2D) window.renderFallback2D();
-            }
-            emitTelemetry();
-        };
-
-        window.addCustomText = function(textStr) {
-            var newId = 'layer_' + Date.now();
-            if (isFabricMode && canvas) {
-                var text = new fabric.Text(textStr || 'NEW VECTOR DESIGN', {
-                    fontSize: currentZoneWidth > 150 ? 16 : 9,
-                    fontFamily: 'sans-serif',
-                    fontWeight: 'bold',
-                    fill: '#FFFFFF',
-                    left: currentZoneWidth / 2,
-                    top: currentZoneHeight / 2,
-                    originX: 'center',
-                    originY: 'center',
-                    cornerColor: '#2563eb',
-                    cornerSize: 10
-                });
-                text.dataId = newId;
-                text.dataName = textStr || 'Custom Text';
-                layersMap[newId] = text;
-                canvas.add(text);
-                canvas.setActiveObject(text);
-                canvas.renderAll();
-            } else {
-                fallbackLayers.push({
-                    id: newId,
-                    name: textStr || 'Custom Text',
-                    type: 'text',
-                    text: textStr || 'NEW VECTOR DESIGN',
-                    x: currentZoneWidth / 2,
-                    y: currentZoneHeight / 2,
-                    w: 120,
-                    h: 24,
-                    scale: 1.0,
-                    angle: 0,
-                    fill: '#FFFFFF',
-                    visible: true
-                });
-                activeFallbackId = newId;
-                if (window.renderFallback2D) window.renderFallback2D();
-            }
-            emitTelemetry();
-        };
-
-        window.addPresetGraphic = function(presetName, colorHex) {
-            var newId = 'layer_' + Date.now();
-            if (isFabricMode && canvas) {
-                var shape = new fabric.Circle({
-                    radius: 36,
-                    fill: colorHex || '#F59E0B',
-                    left: currentZoneWidth / 2,
-                    top: currentZoneHeight / 2,
-                    originX: 'center',
-                    originY: 'center',
-                    cornerColor: '#2563eb',
-                    cornerSize: 10
-                });
-                shape.dataId = newId;
-                shape.dataName = presetName || 'Graphic Emblem';
-                layersMap[newId] = shape;
-                canvas.add(shape);
-                canvas.setActiveObject(shape);
-                canvas.renderAll();
-            } else {
-                fallbackLayers.push({
-                    id: newId,
-                    name: presetName || 'Graphic Emblem',
-                    type: 'preset',
-                    x: currentZoneWidth / 2,
-                    y: currentZoneHeight / 2,
-                    r: 36,
-                    w: 72,
-                    h: 72,
-                    scale: 1.0,
-                    angle: 0,
-                    fill: colorHex || '#F59E0B',
-                    visible: true
-                });
-                activeFallbackId = newId;
-                if (window.renderFallback2D) window.renderFallback2D();
-            }
-            emitTelemetry();
-        };
-
-        // Safety watchdog: If Fabric hasn't loaded within 200ms, start 2D fallback immediately
-        setTimeout(function() {
-            if (!canvas && fallbackLayers.length === 0) {
-                initFallback2D();
-            }
-        }, 200);
-
-        window.onload = function() {
-            if (typeof fabric !== 'undefined') {
-                initFabric();
-            } else {
-                initFallback2D();
-            }
-        };
-    </script>
-</body>
-</html>
-    """.trimIndent()
-}
-
-// ============================================================================
-// COMPOSABLE: POD STUDIO ENTERPRISE WORKSPACE (SMARTPHONE GALAXY S10E OPTIMIZED)
-// ============================================================================
-
-enum class PodMobileStudioTab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    GARMENT("Garment", Icons.Default.Checkroom),
+enum class PodBottomTab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    PRODUCT("Garment", Icons.Default.Checkroom),
     LAYERS("Layers", Icons.Default.Layers),
-    ADD_DESIGN("Design", Icons.Default.AddCircleOutline),
-    PAYLOAD("API / Sync", Icons.Default.CloudSync)
+    ADD_ART("Add Art", Icons.Default.AddCircleOutline)
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PodStudioDesktopWorkspace(
     viewModel: MainViewModel? = null,
     onNavigateBack: () -> Unit = {}
 ) {
-    // 1. Android Back Handler for standard system gesture backward navigation
     BackHandler {
         onNavigateBack()
     }
@@ -765,137 +91,117 @@ fun PodStudioDesktopWorkspace(
     val gson = remember { GsonBuilder().setPrettyPrinting().create() }
     val httpClient = remember { OkHttpClient() }
 
-    // State: Mode Switcher (Printify Style: Edit / Design vs Lifestyle Preview)
-    var viewMode by remember { mutableStateOf("Design") } // "Design" or "Preview"
-    var activeMobileTab by remember { mutableStateOf(PodMobileStudioTab.GARMENT) }
+    // Workspace Mode (Design Canvas, 3D Lifestyle, Catalog, API/Sync)
+    var workspaceMode by remember { mutableStateOf(PodWorkspaceMode.DESIGN) }
+    var activeBottomTab by remember { mutableStateOf(PodBottomTab.PRODUCT) }
 
-    // State: Catalog Selections
-    var selectedProduct by remember { mutableStateOf(DESKTOP_CATALOG[0]) }
-    var selectedColor by remember { mutableStateOf(DESKTOP_SWATCHES[0]) }
+    // Selections
+    var selectedProduct by remember { mutableStateOf(PRINTIFY_CATALOG[0]) }
+    var selectedColor by remember { mutableStateOf(PRINTIFY_SWATCHES[0]) }
     var selectedZoneKey by remember { mutableStateOf("chest") }
-    val currentZone = DESKTOP_ZONES[selectedZoneKey] ?: DESKTOP_ZONES["chest"]!!
+    val currentZone = PRINTIFY_ZONES[selectedZoneKey] ?: PRINTIFY_ZONES["chest"]!!
 
-    // State: Layer Stack
-    var selectedLayerId by remember { mutableStateOf("layer_circle") }
-    var newLayerText by remember { mutableStateOf("") }
-    var showAddLayerDialog by remember { mutableStateOf(false) }
+    // Active Vector Layers
+    var layers by remember {
+        mutableStateOf(
+            listOf(
+                PodVectorLayer(
+                    id = "layer_base_crest",
+                    name = "KL Gothic Crest",
+                    type = PodLayerType.VECTOR,
+                    textContent = "Kritical Limitz",
+                    scale = 1.0f,
+                    rotation = 0f,
+                    tintHex = "#FFFFFF"
+                ),
+                PodVectorLayer(
+                    id = "layer_text_title",
+                    name = "Kritical Limitz Typography",
+                    type = PodLayerType.TEXT,
+                    textContent = "KRITICAL LIMITZ",
+                    fontStyle = "Gothic Chicano",
+                    offsetY = 55f,
+                    scale = 0.9f,
+                    tintHex = "#38BDF8"
+                )
+            )
+        )
+    }
 
-    // State: AI Prompt Module
-    var aiPrompt by remember { mutableStateOf("Hyper-detailed fine-line black and grey illustration, custom gothic lettering 'Kritical Limitz', realistic portraiture with payasa makeup, lowrider chrome artifacts, and gritty urban textures. Master-Class contrast stippling, full back print. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]") }
+    var selectedLayerId by remember { mutableStateOf<String?>("layer_base_crest") }
+
+    // Text & AI Generation state
+    var customTextInput by remember { mutableStateOf("KRITICAL LIMITZ") }
+    var aiPrompt by remember { mutableStateOf("Hyper-detailed fine-line black and grey Chicano payasa portrait, lowrider chrome artifacts, and gothic lettering. 300 DPI stippling.") }
     var isGeneratingAi by remember { mutableStateOf(false) }
-    var aiStatusMessage by remember { mutableStateOf<String?>(null) }
 
-    // State: Live Printify API-Ready Payload
-    var rawTelemetryJson by remember { mutableStateOf("") }
-    var formattedPrintifyPayload by remember { mutableStateOf("{}") }
-    var parsedLayersList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    // Publishing state
     var isPublishing by remember { mutableStateOf(false) }
     var publishSuccessBanner by remember { mutableStateOf<String?>(null) }
-
-    // State: Theme Toggle
-    var isDarkTheme by remember { mutableStateOf(true) }
-
-    // WebView Reference for Fabric.js
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
     // Target SKU
     val computedSku = "${selectedProduct.baseSku}-${currentZone.skuCode}-2026"
 
-    // Construct Printify API-Ready JSON Payload whenever telemetry changes
-    LaunchedEffect(rawTelemetryJson, selectedProduct, selectedColor, currentZone) {
-        try {
-            val rootObj = if (rawTelemetryJson.isNotBlank()) {
-                gson.fromJson(rawTelemetryJson, JsonObject::class.java)
-            } else {
-                JsonObject()
-            }
+    // Construct live Printify JSON payload conforming to /v1/shops/{shop_id}/products.json
+    val formattedPrintifyPayload = remember(selectedProduct, selectedColor, currentZone, layers) {
+        val imagesList = layers.map { l ->
+            mapOf(
+                "id" to l.id,
+                "name" to l.name,
+                "type" to l.type.name.lowercase(),
+                "visible" to l.isVisible,
+                "x" to l.offsetX.toInt(),
+                "y" to l.offsetY.toInt(),
+                "scale_x" to l.scale,
+                "scale_y" to l.scale,
+                "angle" to l.rotation.toInt(),
+                "normalized_x" to (0.5f + (l.offsetX / currentZone.widthPx)).coerceIn(0f, 1f),
+                "normalized_y" to (0.5f + (l.offsetY / currentZone.heightPx)).coerceIn(0f, 1f),
+                "dpi" to l.liveDpi,
+                "tint_hex" to l.tintHex
+            )
+        }
 
-            val layersArray = rootObj.getAsJsonArray("layers")
-            val imagesList = mutableListOf<Map<String, Any>>()
-
-            layersArray?.forEach { elem ->
-                val obj = elem.asJsonObject
-                imagesList.add(
-                    mapOf(
-                        "id" to (obj.get("id")?.asString ?: "layer_vector"),
-                        "name" to (obj.get("name")?.asString ?: "Graphic Element"),
-                        "type" to (obj.get("type")?.asString ?: "vector"),
-                        "visible" to (obj.get("visible")?.asBoolean ?: true),
-                        "x" to (obj.get("x")?.asInt ?: 0),
-                        "y" to (obj.get("y")?.asInt ?: 0),
-                        "scale_x" to (obj.get("scale_x")?.asFloat ?: 1.0f),
-                        "scale_y" to (obj.get("scale_y")?.asFloat ?: 1.0f),
-                        "angle" to (obj.get("angle")?.asInt ?: 0),
-                        "normalized_x" to (obj.get("normalized_x")?.asFloat ?: 0.5f),
-                        "normalized_y" to (obj.get("normalized_y")?.asFloat ?: 0.5f)
-                    )
-                )
-            }
-
-            parsedLayersList = imagesList
-
-            val printifyPayload = mapOf(
-                "title" to "Kritical Limitz (KL) - ${selectedProduct.name}",
-                "description" to "Direct-to-garment underground luxury streetwear vector placement engineered on ${selectedProduct.weight}.",
-                "sku" to computedSku,
-                "brand" to "Kritical Limitz",
-                "storefront_domain" to "kriticallimitz.printify.me",
-                "staging_status" to "PENDING_STAGING",
-                "staging_tag" to "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
-                "blueprint_id" to selectedProduct.blueprintId,
-                "print_provider_id" to 1,
-                "variants" to listOf(4201, 4202, 4203),
-                "garment" to mapOf(
-                    "color_hex" to selectedColor.hex,
-                    "color_name" to selectedColor.name
-                ),
-                "print_regions" to listOf(
-                    mapOf(
-                        "place" to if (selectedZoneKey == "chest") "front_chest" else (if (selectedZoneKey == "back") "back_large" else "pocket_left"),
-                        "dpi" to 300,
-                        "bounds" to mapOf("width" to currentZone.widthPx, "height" to currentZone.heightPx),
-                        "images" to imagesList
-                    )
+        val payload = mapOf(
+            "title" to "Kritical Limitz (KL) - ${selectedProduct.name}",
+            "description" to "${selectedProduct.description} Engineered on ${selectedProduct.weight}.",
+            "sku" to computedSku,
+            "brand" to "Kritical Limitz",
+            "storefront_domain" to "kriticallimitz.printify.me",
+            "staging_status" to "PENDING_STAGING",
+            "staging_tag" to "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+            "blueprint_id" to selectedProduct.blueprintId,
+            "print_provider_id" to 1,
+            "variants" to listOf(4201, 4202, 4203, 4204),
+            "garment" to mapOf(
+                "color_hex" to selectedColor.hex,
+                "color_name" to selectedColor.name
+            ),
+            "print_regions" to listOf(
+                mapOf(
+                    "place" to if (selectedZoneKey == "chest") "front_chest" else (if (selectedZoneKey == "back") "back_large" else "pocket_left"),
+                    "dpi" to 300,
+                    "bounds" to mapOf("width" to currentZone.widthPx, "height" to currentZone.heightPx),
+                    "images" to imagesList
                 )
             )
-
-            formattedPrintifyPayload = gson.toJson(printifyPayload)
-        } catch (_: Exception) {}
+        )
+        gson.toJson(payload)
     }
 
-    // Function to trigger client auto-scale via Fabric.js
-    fun triggerFabricAutoScale(mode: PodAutoScaler.ScalingMode) {
-        val jsMode = mode.name
-        webViewRef?.evaluateJavascript("window.autoScaleActive('$jsMode');", null)
-    }
-
-    // Function to publish live order & mockup
+    // Function to publish order & double-entry ledger settlement into Room DB
     fun publishToBackendRoute() {
         if (isPublishing) return
         isPublishing = true
 
         coroutineScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val orderId = "pod-ord-" + UUID.randomUUID().toString().take(8)
+
             try {
-                // Dynamically resolve configured server endpoint with automatic fallback logic
-                val configuredUrl = viewModel?.settings?.value?.backendServerEndpoint
-                val resolvedEndpoint = resolveActiveServerEndpoint(configuredUrl, httpClient)
+                val db = AppDatabase.getInstance(context)
 
-                val mediaType = "application/json; charset=utf-8".toMediaType()
-                val body = formattedPrintifyPayload.toRequestBody(mediaType)
-                val request = Request.Builder()
-                    .url("$resolvedEndpoint/api/pod/workspace/publish")
-                    .post(body)
-                    .build()
-
-                try {
-                    httpClient.newCall(request).execute().close()
-                } catch (_: Exception) {
-                    // Handled gracefully; local database insertion ensures zero downtime
-                }
-
-                // Insert into real Room database DAO directly with PENDING_STAGING state
-                val now = System.currentTimeMillis()
-                val orderId = "pod-ord-" + UUID.randomUUID().toString().take(8)
+                // 1. Insert into Room PodOrderDao
                 val newOrder = PodOrderEntity(
                     id = orderId,
                     sku = computedSku,
@@ -910,11 +216,9 @@ fun PodStudioDesktopWorkspace(
                     payloadJson = formattedPrintifyPayload,
                     timestamp = now
                 )
-
-                val db = AppDatabase.getInstance(context)
                 db.podOrderDao().insertOrder(newOrder)
 
-                // Mandatory Operational Constraint: Queue into Human Approvals Decision Register
+                // 2. Queue into Human Approvals Decision Register
                 db.decisionDao().insertDecision(
                     DecisionEntity(
                         id = "dec-pod-" + UUID.randomUUID().toString().take(8),
@@ -926,7 +230,7 @@ fun PodStudioDesktopWorkspace(
                     )
                 )
 
-                // Double-entry whole-cents Room ledger entry
+                // 3. Double-entry whole-cents Room ledger entry
                 db.ledgerDao().insertEntry(
                     LedgerEntity(
                         timestamp = now,
@@ -966,7 +270,7 @@ fun PodStudioDesktopWorkspace(
                     )
                 )
 
-                // Update viewModel live queue
+                // 4. Update viewModel live queue
                 viewModel?.podQueue?.value = listOf(
                     PodJobItem(
                         id = orderId,
@@ -984,32 +288,25 @@ fun PodStudioDesktopWorkspace(
                     isPublishing = false
                     val profitDollars = String.format("%.2f", (selectedProduct.retailPriceCents - selectedProduct.cogsCents) / 100.0)
                     publishSuccessBanner = "Staged in PENDING STAGING! SKU: $computedSku (Profit: +$$profitDollars) [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
-                    Toast.makeText(context, "Staged in PENDING STAGING for Human Review!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Staged for Human Approval Register!", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     isPublishing = false
-                    publishSuccessBanner = "Published live! SKU: $computedSku (ID: ${orderIdPreview()})"
+                    publishSuccessBanner = "Published live! SKU: $computedSku (ID: $orderId)"
                 }
             }
         }
     }
 
-    // Dynamic Theme Tokens
-    val workspaceBg = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-    val headerBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
-    val headerBorder = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-    val cardBg = if (isDarkTheme) Color(0xFF1E293B) else Color.White
-    val cardBorder = if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
-    val cardSelectedBg = if (isDarkTheme) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFFEFF6FF)
-    val cardSelectedBorder = Color(0xFF2563EB)
-    val textPrimary = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A)
-    val textSecondary = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-    val textMuted = if (isDarkTheme) Color(0xFF64748B) else Color(0xFF94A3B8)
-    val centerCanvasBg = if (isDarkTheme) Color(0xFF0B1120) else Color(0xFFF1F5F9)
+    // Colors
+    val isDarkTheme = true
+    val workspaceBg = Color(0xFF0B1120)
+    val headerBg = Color(0xFF131B2E)
+    val headerBorder = Color(0xFF334155)
 
     // ========================================================================
-    // ROOT UI: ADAPTIVE MOBILE-FIRST SMARTPHONE + TABLET WORKSPACE
+    // ROOT UI: MASTERCLASS POD POP UP STORE WORKSPACE
     // ========================================================================
     BoxWithConstraints(
         modifier = Modifier
@@ -1017,18 +314,18 @@ fun PodStudioDesktopWorkspace(
             .background(workspaceBg)
             .testTag("pod_desktop_workspace")
     ) {
-        val isCompactScreen = maxWidth < 720.dp
+        val isCompactScreen = maxWidth < 760.dp
 
         Column(modifier = Modifier.fillMaxSize()) {
             // ----------------------------------------------------------------
-            // 1. TOP PRINTIFY-STYLE NAVIGATION BAR
+            // 1. TOP MASTERCLASS NAVIGATION BAR
             // ----------------------------------------------------------------
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp),
+                    .height(60.dp),
                 color = headerBg,
-                shadowElevation = 4.dp,
+                shadowElevation = 6.dp,
                 border = BorderStroke(1.dp, headerBorder)
             ) {
                 Row(
@@ -1051,7 +348,7 @@ fun PodStudioDesktopWorkspace(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back to Console",
-                                tint = textPrimary
+                                tint = Color.White
                             )
                         }
 
@@ -1061,7 +358,7 @@ fun PodStudioDesktopWorkspace(
                                     text = selectedProduct.name,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = textPrimary,
+                                    color = Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1077,53 +374,65 @@ fun PodStudioDesktopWorkspace(
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                     )
                                 }
+                                Surface(
+                                    color = Color(0xFF2563EB).copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "+${selectedProduct.profitMarginPercent}% Margin",
+                                        color = Color(0xFF38BDF8),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                             Text(
-                                text = "${currentZone.name} • ${selectedColor.name}",
+                                text = "${currentZone.name} • ${selectedColor.name} • ${selectedProduct.providerName}",
                                 fontSize = 11.sp,
-                                color = textSecondary,
+                                color = Color(0xFF94A3B8),
                                 maxLines = 1
                             )
                         }
                     }
 
-                    // Right: Edit / Preview Switcher + Publish Action
+                    // Right: Mode Switcher & Publish Action
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Printify Edit vs Preview Mode Toggle Pill
+                        // Mode Switcher Pills
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFE2E8F0),
-                            border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFCBD5E1))
+                            color = Color(0xFF0F172A),
+                            border = BorderStroke(1.dp, Color(0xFF334155))
                         ) {
                             Row(modifier = Modifier.padding(2.dp)) {
                                 Surface(
-                                    onClick = { viewMode = "Design" },
+                                    onClick = { workspaceMode = PodWorkspaceMode.DESIGN },
                                     shape = RoundedCornerShape(16.dp),
-                                    color = if (viewMode == "Design") Color(0xFF2563EB) else Color.Transparent,
+                                    color = if (workspaceMode == PodWorkspaceMode.DESIGN) Color(0xFF2563EB) else Color.Transparent,
                                     modifier = Modifier.testTag("view_mode_design")
                                 ) {
                                     Text(
                                         text = "Edit",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (viewMode == "Design") Color.White else textSecondary,
+                                        color = if (workspaceMode == PodWorkspaceMode.DESIGN) Color.White else Color(0xFF94A3B8),
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                     )
                                 }
                                 Surface(
-                                    onClick = { viewMode = "Preview" },
+                                    onClick = { workspaceMode = PodWorkspaceMode.LIFESTYLE_3D },
                                     shape = RoundedCornerShape(16.dp),
-                                    color = if (viewMode == "Preview") Color(0xFF2563EB) else Color.Transparent,
+                                    color = if (workspaceMode == PodWorkspaceMode.LIFESTYLE_3D) Color(0xFF2563EB) else Color.Transparent,
                                     modifier = Modifier.testTag("view_mode_preview")
                                 ) {
                                     Text(
                                         text = "Preview",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (viewMode == "Preview") Color.White else textSecondary,
+                                        color = if (workspaceMode == PodWorkspaceMode.LIFESTYLE_3D) Color.White else Color(0xFF94A3B8),
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                     )
                                 }
@@ -1148,6 +457,52 @@ fun PodStudioDesktopWorkspace(
                                 Icon(Icons.Default.CloudDone, contentDescription = "Publish", modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Publish", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Top Mode Tabs Row (Canvas Studio, 3D Lifestyle, Printify Catalog, API/Sync)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                color = Color(0xFF0F172A),
+                border = BorderStroke(1.dp, Color(0xFF1E293B))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    PodWorkspaceMode.values().forEach { mode ->
+                        val isSelected = workspaceMode == mode
+                        Surface(
+                            onClick = { workspaceMode = mode },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color.Transparent,
+                            border = if (isSelected) BorderStroke(1.dp, Color(0xFF2563EB)) else null
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = mode.icon,
+                                    contentDescription = mode.label,
+                                    tint = if (isSelected) Color(0xFF38BDF8) else Color(0xFF64748B),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = mode.label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                                )
                             }
                         }
                     }
@@ -1187,506 +542,325 @@ fun PodStudioDesktopWorkspace(
             }
 
             // ----------------------------------------------------------------
-            // 2. MAIN BODY: DESIGN CANVAS OR LIFESTYLE PREVIEW
+            // 2. MAIN BODY: DEPENDING ON ACTIVE WORKSPACE MODE
             // ----------------------------------------------------------------
-            if (viewMode == "Preview") {
-                // LIFESTYLE MOCKUP PREVIEW SCREEN (Printify Clone)
-                LifestyleMockupPreviewView(
-                    product = selectedProduct,
-                    color = selectedColor,
-                    zone = currentZone,
-                    layers = parsedLayersList,
-                    onPublish = { publishToBackendRoute() },
-                    isPublishing = isPublishing,
-                    isDarkTheme = isDarkTheme
-                )
-            } else {
-                // DESIGNER CANVAS WORKSPACE
-                if (isCompactScreen) {
-                    // Mobile Smartphone Layout (Galaxy S10e Optimized)
-                    MobileDesignerWorkspace(
-                        selectedProduct = selectedProduct,
-                        selectedColor = selectedColor,
-                        currentZone = currentZone,
-                        selectedZoneKey = selectedZoneKey,
-                        onSelectZone = { selectedZoneKey = it },
-                        activeTab = activeMobileTab,
-                        onSelectTab = { activeMobileTab = it },
-                        onSelectProduct = { selectedProduct = it },
-                        onSelectColor = { selectedColor = it },
-                        onAutoScale = { triggerFabricAutoScale(it) },
-                        webViewRef = webViewRef,
-                        onWebViewReady = { webViewRef = it },
-                        onTelemetryUpdated = { rawTelemetryJson = it },
-                        onLayerSelected = { selectedLayerId = it },
-                        selectedLayerId = selectedLayerId,
-                        parsedLayers = parsedLayersList,
-                        formattedPayload = formattedPrintifyPayload,
-                        onPublish = { publishToBackendRoute() },
-                        isPublishing = isPublishing,
-                        aiPrompt = aiPrompt,
-                        onAiPromptChange = { aiPrompt = it },
-                        isGeneratingAi = isGeneratingAi,
-                        onGenerateAi = {
-                            isGeneratingAi = true
-                            coroutineScope.launch {
-                                try {
-                                    val promptSummary = aiPrompt.take(24)
-                                    webViewRef?.evaluateJavascript("window.addPresetGraphic('$promptSummary', '${selectedColor.hex}');", null)
-                                    aiStatusMessage = "Synthesized 300 DPI vector artwork for: $promptSummary"
-                                } finally {
-                                    isGeneratingAi = false
-                                }
-                            }
-                        },
-                        aiStatusMessage = aiStatusMessage,
-                        onAddCustomText = { text ->
-                            webViewRef?.evaluateJavascript("window.addCustomText('$text');", null)
-                        },
-                        onAddPreset = { preset ->
-                            webViewRef?.evaluateJavascript("window.addPresetGraphic('${preset.title}', '${preset.color}');", null)
-                        },
-                        isDarkTheme = isDarkTheme,
-                        centerCanvasBg = centerCanvasBg
-                    )
-                } else {
-                    // Tablet & Desktop Responsive Layout
-                    DesktopDualPaneWorkspace(
-                        selectedProduct = selectedProduct,
-                        selectedColor = selectedColor,
-                        currentZone = currentZone,
-                        selectedZoneKey = selectedZoneKey,
-                        onSelectZone = { selectedZoneKey = it },
-                        onSelectProduct = { selectedProduct = it },
-                        onSelectColor = { selectedColor = it },
-                        onAutoScale = { triggerFabricAutoScale(it) },
-                        webViewRef = webViewRef,
-                        onWebViewReady = { webViewRef = it },
-                        onTelemetryUpdated = { rawTelemetryJson = it },
-                        onLayerSelected = { selectedLayerId = it },
-                        selectedLayerId = selectedLayerId,
-                        parsedLayers = parsedLayersList,
-                        formattedPayload = formattedPrintifyPayload,
-                        onPublish = { publishToBackendRoute() },
-                        isPublishing = isPublishing,
-                        aiPrompt = aiPrompt,
-                        onAiPromptChange = { aiPrompt = it },
-                        isGeneratingAi = isGeneratingAi,
-                        onGenerateAi = {
-                            isGeneratingAi = true
-                            coroutineScope.launch {
-                                try {
-                                    val promptSummary = aiPrompt.take(24)
-                                    webViewRef?.evaluateJavascript("window.addPresetGraphic('$promptSummary', '${selectedColor.hex}');", null)
-                                    aiStatusMessage = "Synthesized 300 DPI vector artwork."
-                                } finally {
-                                    isGeneratingAi = false
-                                }
-                            }
-                        },
-                        aiStatusMessage = aiStatusMessage,
-                        onAddCustomText = { text ->
-                            webViewRef?.evaluateJavascript("window.addCustomText('$text');", null)
-                        },
-                        onAddPreset = { preset ->
-                            webViewRef?.evaluateJavascript("window.addPresetGraphic('${preset.title}', '${preset.color}');", null)
-                        },
-                        isDarkTheme = isDarkTheme,
-                        centerCanvasBg = centerCanvasBg
-                    )
-                }
-            }
-        }
-    }
-
-    // Add Custom Layer Dialog
-    if (showAddLayerDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddLayerDialog = false },
-            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color.White,
-            title = { Text("Add Custom Text Layer", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = textPrimary) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Enter typographic text or brand graphic name:", fontSize = 12.sp, color = textSecondary)
-                    OutlinedTextField(
-                        value = newLayerText,
-                        onValueChange = { newLayerText = it },
-                        placeholder = { Text("e.g. OVERTHINKING", fontSize = 12.sp, color = textMuted) },
-                        modifier = Modifier.fillMaxWidth().testTag("add_custom_text_input"),
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val textToAdd = newLayerText.trim().ifEmpty { "CUSTOM GRAPHIC" }
-                        webViewRef?.evaluateJavascript("window.addCustomText('$textToAdd');", null)
-                        newLayerText = ""
-                        showAddLayerDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                    modifier = Modifier.testTag("confirm_add_text_btn")
-                ) {
-                    Text("Add to Canvas")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddLayerDialog = false }) {
-                    Text("Cancel", color = textSecondary)
-                }
-            }
-        )
-    }
-}
-
-private fun orderIdPreview(): String = UUID.randomUUID().toString().take(8).uppercase()
-
-// ============================================================================
-// MOBILE WORKSPACE LAYOUT (SMARTPHONE SAMSUNG GALAXY S10E OPTIMIZED)
-// ============================================================================
-
-@Composable
-fun MobileDesignerWorkspace(
-    selectedProduct: DesktopProductBlank,
-    selectedColor: DesktopColorSwatch,
-    currentZone: DesktopPrintZone,
-    selectedZoneKey: String,
-    onSelectZone: (String) -> Unit,
-    activeTab: PodMobileStudioTab,
-    onSelectTab: (PodMobileStudioTab) -> Unit,
-    onSelectProduct: (DesktopProductBlank) -> Unit,
-    onSelectColor: (DesktopColorSwatch) -> Unit,
-    onAutoScale: (PodAutoScaler.ScalingMode) -> Unit,
-    webViewRef: WebView?,
-    onWebViewReady: (WebView) -> Unit,
-    onTelemetryUpdated: (String) -> Unit,
-    onLayerSelected: (String) -> Unit,
-    selectedLayerId: String,
-    parsedLayers: List<Map<String, Any>>,
-    formattedPayload: String,
-    onPublish: () -> Unit,
-    isPublishing: Boolean,
-    aiPrompt: String,
-    onAiPromptChange: (String) -> Unit,
-    isGeneratingAi: Boolean,
-    onGenerateAi: () -> Unit,
-    aiStatusMessage: String?,
-    onAddCustomText: (String) -> Unit,
-    onAddPreset: (ClipartPreset) -> Unit,
-    isDarkTheme: Boolean,
-    centerCanvasBg: Color
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        // TOP HALF: PRINTIFY INTERACTIVE CANVAS WITH FLOATING TOOLBAR
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(centerCanvasBg),
-            contentAlignment = Alignment.Center
-        ) {
-            // Isometric Canvas Grid Floor
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val step = 24.dp.toPx()
-                val dotRadius = 1.dp.toPx()
-                var x = 0f
-                while (x < size.width) {
-                    var y = 0f
-                    while (y < size.height) {
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.07f),
-                            radius = dotRadius,
-                            center = androidx.compose.ui.geometry.Offset(x, y)
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when (workspaceMode) {
+                    PodWorkspaceMode.LIFESTYLE_3D -> {
+                        Pod3dMockupView(
+                            product = selectedProduct,
+                            color = selectedColor,
+                            zone = currentZone,
+                            layers = layers,
+                            onPublish = { publishToBackendRoute() },
+                            isPublishing = isPublishing,
+                            isDarkTheme = isDarkTheme
                         )
-                        y += step
                     }
-                    x += step
-                }
-            }
-
-            // Garment Mockup Frame with Interactive Silhouette
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Vector Silhouette of the garment dynamically tinted in selected swatch
-                val garmentColor = Color(android.graphics.Color.parseColor(selectedColor.hex))
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp, vertical = 12.dp)
-                ) {
-                    val w = size.width
-                    val h = size.height
-
-                    val path = Path().apply {
-                        moveTo(w * 0.32f, h * 0.08f)
-                        cubicTo(w * 0.38f, h * 0.13f, w * 0.62f, h * 0.13f, w * 0.68f, h * 0.08f)
-                        lineTo(w * 0.88f, h * 0.20f)
-                        cubicTo(w * 0.93f, h * 0.25f, w * 0.89f, h * 0.33f, w * 0.83f, h * 0.38f)
-                        lineTo(w * 0.77f, h * 0.42f)
-                        lineTo(w * 0.78f, h * 0.95f)
-                        lineTo(w * 0.22f, h * 0.95f)
-                        lineTo(w * 0.23f, h * 0.42f)
-                        lineTo(w * 0.17f, h * 0.38f)
-                        cubicTo(w * 0.11f, h * 0.33f, w * 0.07f, h * 0.25f, w * 0.12f, h * 0.20f)
-                        close()
+                    PodWorkspaceMode.CATALOG -> {
+                        PodCatalogBrowserView(
+                            catalog = PRINTIFY_CATALOG,
+                            selectedProduct = selectedProduct,
+                            onSelectProduct = { selectedProduct = it },
+                            onSwitchToDesign = { workspaceMode = PodWorkspaceMode.DESIGN },
+                            isDarkTheme = isDarkTheme
+                        )
                     }
-
-                    // Shadow & Garment Fill
-                    drawPath(path, color = Color.Black.copy(alpha = 0.35f))
-                    drawPath(path, color = garmentColor)
-
-                    // Collar Ribbing
-                    drawArc(
-                        color = Color.Black.copy(alpha = 0.25f),
-                        startAngle = 0f,
-                        sweepAngle = 180f,
-                        useCenter = false,
-                        topLeft = androidx.compose.ui.geometry.Offset(w * 0.34f, h * 0.07f),
-                        size = androidx.compose.ui.geometry.Size(w * 0.32f, h * 0.07f),
-                        style = Stroke(width = 2.5.dp.toPx())
-                    )
-                }
-
-                // Bounding Print Frame Housing WebView Fabric Canvas
-                val frameTopOffset = if (selectedZoneKey == "chest") (-10).dp else (if (selectedZoneKey == "back") (-6).dp else (-40).dp)
-                val frameLeftOffset = if (selectedZoneKey == "pocket") 35.dp else 0.dp
-
-                Box(
-                    modifier = Modifier
-                        .offset(x = frameLeftOffset, y = frameTopOffset)
-                        .size(
-                            width = (currentZone.widthPx * 0.85f).dp,
-                            height = (currentZone.heightPx * 0.85f).dp
+                    PodWorkspaceMode.API_TELEMETRY -> {
+                        PodApiTelemetryView(
+                            formattedPayload = formattedPrintifyPayload,
+                            product = selectedProduct,
+                            color = selectedColor,
+                            zone = currentZone,
+                            sku = computedSku,
+                            onPublish = { publishToBackendRoute() },
+                            isPublishing = isPublishing,
+                            viewModel = viewModel,
+                            isDarkTheme = isDarkTheme
                         )
-                        .border(
-                            BorderStroke(1.5.dp, Color(0xFF22D3EE).copy(alpha = 0.85f)),
-                            RoundedCornerShape(4.dp)
-                        )
-                ) {
-                    // Clean Standard Android WebView for Interactive Vector Canvas
-                    AndroidView(
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                settings.apply {
-                                    javaScriptEnabled = true
-                                    domStorageEnabled = true
-                                    loadWithOverviewMode = true
-                                    useWideViewPort = true
-                                    cacheMode = WebSettings.LOAD_DEFAULT
-                                    allowFileAccess = false
-                                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                    }
+                    PodWorkspaceMode.DESIGN -> {
+                        // DESIGN CANVAS WORKSPACE (ADAPTIVE MOBILE + DESKTOP)
+                        if (isCompactScreen) {
+                            // Mobile Layout: Top Half Canvas, Bottom Half Tabbed Inspector
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                // Canvas Area
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1.15f)
+                                ) {
+                                    PodVectorCanvas(
+                                        product = selectedProduct,
+                                        color = selectedColor,
+                                        zone = currentZone,
+                                        layers = layers,
+                                        selectedLayerId = selectedLayerId,
+                                        onSelectLayer = { selectedLayerId = it },
+                                        onUpdateLayer = { updated ->
+                                            layers = layers.map { if (it.id == updated.id) updated else it }
+                                        },
+                                        onDuplicateLayer = { orig ->
+                                            val copy = orig.copy(
+                                                id = "layer_" + UUID.randomUUID().toString().take(6),
+                                                name = "${orig.name} (Copy)",
+                                                offsetX = orig.offsetX + 15f,
+                                                offsetY = orig.offsetY + 15f
+                                            )
+                                            layers = layers + copy
+                                            selectedLayerId = copy.id
+                                        },
+                                        onDeleteLayer = { id ->
+                                            layers = layers.filter { it.id != id }
+                                            if (selectedLayerId == id) {
+                                                selectedLayerId = layers.lastOrNull()?.id
+                                            }
+                                        },
+                                        isDarkTheme = isDarkTheme
+                                    )
                                 }
-                                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                                setLayerType(WebView.LAYER_TYPE_HARDWARE, null)
 
-                                webChromeClient = WebChromeClient()
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
+                                // Bottom Controls Tabs & Content
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(0.95f),
+                                    color = Color(0xFF131B2E),
+                                    border = BorderStroke(1.dp, Color(0xFF334155))
+                                ) {
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        // Bottom Tab Header
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFF0F172A))
+                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceAround
+                                        ) {
+                                            PodBottomTab.values().forEach { tab ->
+                                                val isTabActive = activeBottomTab == tab
+                                                Surface(
+                                                    onClick = { activeBottomTab = tab },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isTabActive) Color(0xFF2563EB) else Color.Transparent
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        Icon(tab.icon, contentDescription = tab.label, tint = if (isTabActive) Color.White else Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
+                                                        Text(tab.label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isTabActive) Color.White else Color(0xFF94A3B8))
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Tab Content
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(12.dp)
+                                                .verticalScroll(rememberScrollState())
+                                        ) {
+                                            when (activeBottomTab) {
+                                                PodBottomTab.PRODUCT -> {
+                                                    ProductAndZoneSelector(
+                                                        selectedProduct = selectedProduct,
+                                                        selectedColor = selectedColor,
+                                                        selectedZoneKey = selectedZoneKey,
+                                                        onSelectColor = { selectedColor = it },
+                                                        onSelectZone = { selectedZoneKey = it },
+                                                        isDarkTheme = isDarkTheme
+                                                    )
+                                                }
+                                                PodBottomTab.LAYERS -> {
+                                                    LayerStackInspector(
+                                                        layers = layers,
+                                                        selectedLayerId = selectedLayerId,
+                                                        onSelectLayer = { selectedLayerId = it },
+                                                        onUpdateLayer = { updated ->
+                                                            layers = layers.map { if (it.id == updated.id) updated else it }
+                                                        },
+                                                        onReorder = { from, to ->
+                                                            val mutable = layers.toMutableList()
+                                                            val item = mutable.removeAt(from)
+                                                            mutable.add(to, item)
+                                                            layers = mutable
+                                                        },
+                                                        onDelete = { id ->
+                                                            layers = layers.filter { it.id != id }
+                                                            if (selectedLayerId == id) selectedLayerId = layers.lastOrNull()?.id
+                                                        },
+                                                        isDarkTheme = isDarkTheme
+                                                    )
+                                                }
+                                                PodBottomTab.ADD_ART -> {
+                                                    AddArtDesignPanel(
+                                                        onAddText = { text, font, tint ->
+                                                            val newLayer = PodVectorLayer(
+                                                                name = "Text: ${text.take(12)}",
+                                                                type = PodLayerType.TEXT,
+                                                                textContent = text,
+                                                                fontStyle = font,
+                                                                tintHex = tint,
+                                                                scale = 1.0f
+                                                            )
+                                                            layers = layers + newLayer
+                                                            selectedLayerId = newLayer.id
+                                                        },
+                                                        onAddPreset = { preset ->
+                                                            val newLayer = PodVectorLayer(
+                                                                name = preset.title,
+                                                                type = PodLayerType.VECTOR,
+                                                                tintHex = preset.color,
+                                                                scale = 1.0f
+                                                            )
+                                                            layers = layers + newLayer
+                                                            selectedLayerId = newLayer.id
+                                                        },
+                                                        onGenerateAi = { prompt ->
+                                                            val newLayer = PodVectorLayer(
+                                                                name = "AI: ${prompt.take(14)}",
+                                                                type = PodLayerType.AI_ART,
+                                                                textContent = prompt,
+                                                                tintHex = "#FFFFFF",
+                                                                scale = 1.1f
+                                                            )
+                                                            layers = layers + newLayer
+                                                            selectedLayerId = newLayer.id
+                                                        },
+                                                        isDarkTheme = isDarkTheme
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-
-                                val bridge = PodFabricBridge(
-                                    onPayloadUpdated = onTelemetryUpdated,
-                                    onLayerSelected = onLayerSelected
-                                )
-                                addJavascriptInterface(bridge, "PodBridge")
-
-                                setOnTouchListener { v, _ ->
-                                    v.parent?.requestDisallowInterceptTouchEvent(true)
-                                    false
+                            }
+                        } else {
+                            // Desktop / Tablet Dual-Pane Layout: Canvas on Left, Controls on Right
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1.4f)
+                                        .fillMaxHeight()
+                                ) {
+                                    PodVectorCanvas(
+                                        product = selectedProduct,
+                                        color = selectedColor,
+                                        zone = currentZone,
+                                        layers = layers,
+                                        selectedLayerId = selectedLayerId,
+                                        onSelectLayer = { selectedLayerId = it },
+                                        onUpdateLayer = { updated ->
+                                            layers = layers.map { if (it.id == updated.id) updated else it }
+                                        },
+                                        onDuplicateLayer = { orig ->
+                                            val copy = orig.copy(
+                                                id = "layer_" + UUID.randomUUID().toString().take(6),
+                                                name = "${orig.name} (Copy)",
+                                                offsetX = orig.offsetX + 15f,
+                                                offsetY = orig.offsetY + 15f
+                                            )
+                                            layers = layers + copy
+                                            selectedLayerId = copy.id
+                                        },
+                                        onDeleteLayer = { id ->
+                                            layers = layers.filter { it.id != id }
+                                            if (selectedLayerId == id) selectedLayerId = layers.lastOrNull()?.id
+                                        },
+                                        isDarkTheme = isDarkTheme
+                                    )
                                 }
 
-                                loadDataWithBaseURL(
-                                    "https://printdefy.local/",
-                                    generateFabricHtml(currentZone.widthPx, currentZone.heightPx),
-                                    "text/html",
-                                    "UTF-8",
-                                    null
-                                )
-                                onWebViewReady(this)
+                                Surface(
+                                    modifier = Modifier
+                                        .width(360.dp)
+                                        .fillMaxHeight(),
+                                    color = Color(0xFF131B2E),
+                                    border = BorderStroke(1.dp, Color(0xFF334155))
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        ProductAndZoneSelector(
+                                            selectedProduct = selectedProduct,
+                                            selectedColor = selectedColor,
+                                            selectedZoneKey = selectedZoneKey,
+                                            onSelectColor = { selectedColor = it },
+                                            onSelectZone = { selectedZoneKey = it },
+                                            isDarkTheme = isDarkTheme
+                                        )
+
+                                        HorizontalDivider(color = Color(0xFF334155))
+
+                                        LayerStackInspector(
+                                            layers = layers,
+                                            selectedLayerId = selectedLayerId,
+                                            onSelectLayer = { selectedLayerId = it },
+                                            onUpdateLayer = { updated ->
+                                                layers = layers.map { if (it.id == updated.id) updated else it }
+                                            },
+                                            onReorder = { from, to ->
+                                                val mutable = layers.toMutableList()
+                                                val item = mutable.removeAt(from)
+                                                mutable.add(to, item)
+                                                layers = mutable
+                                            },
+                                            onDelete = { id ->
+                                                layers = layers.filter { it.id != id }
+                                                if (selectedLayerId == id) selectedLayerId = layers.lastOrNull()?.id
+                                            },
+                                            isDarkTheme = isDarkTheme
+                                        )
+
+                                        HorizontalDivider(color = Color(0xFF334155))
+
+                                        AddArtDesignPanel(
+                                            onAddText = { text, font, tint ->
+                                                val newLayer = PodVectorLayer(
+                                                    name = "Text: ${text.take(12)}",
+                                                    type = PodLayerType.TEXT,
+                                                    textContent = text,
+                                                    fontStyle = font,
+                                                    tintHex = tint,
+                                                    scale = 1.0f
+                                                )
+                                                layers = layers + newLayer
+                                                selectedLayerId = newLayer.id
+                                            },
+                                            onAddPreset = { preset ->
+                                                val newLayer = PodVectorLayer(
+                                                    name = preset.title,
+                                                    type = PodLayerType.VECTOR,
+                                                    tintHex = preset.color,
+                                                    scale = 1.0f
+                                                )
+                                                layers = layers + newLayer
+                                                selectedLayerId = newLayer.id
+                                            },
+                                            onGenerateAi = { prompt ->
+                                                val newLayer = PodVectorLayer(
+                                                    name = "AI: ${prompt.take(14)}",
+                                                    type = PodLayerType.AI_ART,
+                                                    textContent = prompt,
+                                                    tintHex = "#FFFFFF",
+                                                    scale = 1.1f
+                                                )
+                                                layers = layers + newLayer
+                                                selectedLayerId = newLayer.id
+                                            },
+                                            isDarkTheme = isDarkTheme
+                                        )
+                                    }
+                                }
                             }
-                        },
-                        update = { view ->
-                            onWebViewReady(view)
-                        },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .testTag("fabric_webview_canvas")
-                    )
-                }
-            }
-
-            // Top-left Zone Indicator Pill
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF0F172A).copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, Color(0xFF334155))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Box(modifier = Modifier.size(6.dp).background(Color(0xFF22D3EE), CircleShape))
-                    Text(
-                        text = "${currentZone.name} • ${currentZone.dimensionLabel}",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-
-            // Floating Auto-Scale Quick Action Bar
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 8.dp),
-                color = Color(0xFF0F172A).copy(alpha = 0.90f),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, Color(0xFF334155)),
-                shadowElevation = 6.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "FIT:",
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8)
-                    )
-                    FilledTonalButton(
-                        onClick = { onAutoScale(PodAutoScaler.ScalingMode.CENTER_XY) },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        modifier = Modifier.height(28.dp).testTag("autoscale_center")
-                    ) {
-                        Text("Center", fontSize = 10.sp)
-                    }
-                    FilledTonalButton(
-                        onClick = { onAutoScale(PodAutoScaler.ScalingMode.FIT_SAFE_90) },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White),
-                        modifier = Modifier.height(28.dp).testTag("autoscale_safe90")
-                    ) {
-                        Text("90% Safe", fontSize = 10.sp)
-                    }
-                    FilledTonalButton(
-                        onClick = { onAutoScale(PodAutoScaler.ScalingMode.FIT_WIDTH) },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        modifier = Modifier.height(28.dp).testTag("autoscale_fit_w")
-                    ) {
-                        Text("Fit W", fontSize = 10.sp)
-                    }
-                    FilledTonalButton(
-                        onClick = { onAutoScale(PodAutoScaler.ScalingMode.RESET_NORMAL) },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        modifier = Modifier.height(28.dp).testTag("autoscale_reset")
-                    ) {
-                        Text("Reset", fontSize = 10.sp)
-                    }
-                }
-            }
-        }
-
-        // BOTTOM HALF: TABBED CONTROLS DRAWER (Designed specifically for Galaxy S10e ergonomics)
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1.1f),
-            color = if (isDarkTheme) Color(0xFF1E293B) else Color.White,
-            shadowElevation = 8.dp,
-            border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0))
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Segmented Controller Tab Bar
-                TabRow(
-                    selectedTabIndex = activeTab.ordinal,
-                    containerColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9),
-                    contentColor = Color(0xFF2563EB)
-                ) {
-                    PodMobileStudioTab.values().forEach { tab ->
-                        Tab(
-                            selected = activeTab == tab,
-                            onClick = { onSelectTab(tab) },
-                            icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(18.dp)) },
-                            text = { Text(tab.label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                            modifier = Modifier.testTag("tab_${tab.name.lowercase()}")
-                        )
-                    }
-                }
-
-                // Tab Content Panel
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp)
-                ) {
-                    when (activeTab) {
-                        PodMobileStudioTab.GARMENT -> {
-                            MobileGarmentTabContent(
-                                selectedProduct = selectedProduct,
-                                onSelectProduct = onSelectProduct,
-                                selectedColor = selectedColor,
-                                onSelectColor = onSelectColor,
-                                selectedZoneKey = selectedZoneKey,
-                                onSelectZone = onSelectZone,
-                                isDarkTheme = isDarkTheme
-                            )
-                        }
-                        PodMobileStudioTab.LAYERS -> {
-                            MobileLayersTabContent(
-                                layers = parsedLayers,
-                                selectedLayerId = selectedLayerId,
-                                onSelectLayer = { id ->
-                                    webViewRef?.evaluateJavascript("window.selectLayer('$id');", null)
-                                },
-                                onToggleVisibility = { id, vis ->
-                                    webViewRef?.evaluateJavascript("window.toggleLayer('$id', $vis);", null)
-                                },
-                                onReorder = { id, dir ->
-                                    webViewRef?.evaluateJavascript("window.reorderLayer('$id', '$dir');", null)
-                                },
-                                onDelete = { id ->
-                                    webViewRef?.evaluateJavascript("window.removeLayer('$id');", null)
-                                },
-                                onAddText = onAddCustomText,
-                                isDarkTheme = isDarkTheme
-                            )
-                        }
-                        PodMobileStudioTab.ADD_DESIGN -> {
-                            MobileAddDesignTabContent(
-                                onAddCustomText = onAddCustomText,
-                                onAddPreset = onAddPreset,
-                                aiPrompt = aiPrompt,
-                                onAiPromptChange = onAiPromptChange,
-                                isGeneratingAi = isGeneratingAi,
-                                onGenerateAi = onGenerateAi,
-                                aiStatusMessage = aiStatusMessage,
-                                isDarkTheme = isDarkTheme
-                            )
-                        }
-                        PodMobileStudioTab.PAYLOAD -> {
-                            MobilePayloadTabContent(
-                                payloadJson = formattedPayload,
-                                onPublish = onPublish,
-                                isPublishing = isPublishing,
-                                product = selectedProduct,
-                                color = selectedColor,
-                                isDarkTheme = isDarkTheme
-                            )
                         }
                     }
                 }
@@ -1696,233 +870,88 @@ fun MobileDesignerWorkspace(
 }
 
 // ============================================================================
-// MOBILE TAB CONTENT PANELS
+// INSPECTOR SUBCOMPONENTS (PRODUCT & SWATCH, LAYERS, ADD ART)
 // ============================================================================
 
 @Composable
-fun MobileGarmentTabContent(
-    selectedProduct: DesktopProductBlank,
-    onSelectProduct: (DesktopProductBlank) -> Unit,
-    selectedColor: DesktopColorSwatch,
-    onSelectColor: (DesktopColorSwatch) -> Unit,
+private fun ProductAndZoneSelector(
+    selectedProduct: PrintifyProductBlank,
+    selectedColor: PrintifyColorSwatch,
     selectedZoneKey: String,
+    onSelectColor: (PrintifyColorSwatch) -> Unit,
     onSelectZone: (String) -> Unit,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean = true
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // 1. Blanks Selection Row
-        Text(
-            text = "SELECT APPAREL BLANK",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(DESKTOP_CATALOG) { blank ->
-                val isSelected = selectedProduct.id == blank.id
-                Surface(
-                    onClick = { onSelectProduct(blank) },
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isSelected) (if (isDarkTheme) Color(0xFF1E3A8A) else Color(0xFFDBEAFE)) else (if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9)),
-                    border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) Color(0xFF2563EB) else Color(0xFF334155)),
-                    modifier = Modifier.testTag("product_blank_${blank.id}")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Default.Checkroom, contentDescription = null, tint = if (isSelected) Color(0xFF2563EB) else Color.Gray, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(blank.name, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isDarkTheme) Color.White else Color.Black)
-                        Text("$${blank.retailPriceCents / 100.0}", fontSize = 10.sp, color = Color(0xFF10B981), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
-
-        // 2. Color Swatches Palette
-        Text(
-            text = "GARMENT COLOR SWATCH (${selectedColor.name})",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(DESKTOP_SWATCHES) { swatch ->
-                val isSelected = selectedColor.id == swatch.id
-                val swatchColor = Color(android.graphics.Color.parseColor(swatch.hex))
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(swatchColor)
-                        .border(
-                            width = if (isSelected) 3.dp else 1.dp,
-                            color = if (isSelected) Color(0xFF2563EB) else Color.Gray.copy(alpha = 0.5f),
-                            shape = CircleShape
-                        )
-                        .clickable { onSelectColor(swatch) }
-                        .testTag("color_swatch_${swatch.id}"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isSelected) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = if (swatch.isLightText) Color.White else Color.Black,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 3. Print Region Selection
-        Text(
-            text = "PRINT REGION",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DESKTOP_ZONES.forEach { (key, zone) ->
-                val isSelected = selectedZoneKey == key
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onSelectZone(key) },
-                    label = { Text(zone.name, fontSize = 11.sp) },
-                    leadingIcon = if (isSelected) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
-                    modifier = Modifier.testTag("zone_chip_$key")
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun MobileLayersTabContent(
-    layers: List<Map<String, Any>>,
-    selectedLayerId: String,
-    onSelectLayer: (String) -> Unit,
-    onToggleVisibility: (String, Boolean) -> Unit,
-    onReorder: (String, String) -> Unit,
-    onDelete: (String) -> Unit,
-    onAddText: (String) -> Unit,
-    isDarkTheme: Boolean
-) {
-    var quickTextInput by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Quick Add Text Input
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Print Zones", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            OutlinedTextField(
-                value = quickTextInput,
-                onValueChange = { quickTextInput = it },
-                placeholder = { Text("Add custom typography...", fontSize = 11.sp) },
-                singleLine = true,
-                modifier = Modifier.weight(1f).testTag("quick_text_input")
-            )
-            Button(
-                onClick = {
-                    if (quickTextInput.isNotBlank()) {
-                        onAddText(quickTextInput.trim())
-                        quickTextInput = ""
+            selectedProduct.supportedZones.forEach { zoneKey ->
+                val zone = PRINTIFY_ZONES[zoneKey] ?: return@forEach
+                val isSelected = selectedZoneKey == zoneKey
+                Surface(
+                    onClick = { onSelectZone(zoneKey) },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) Color(0xFF2563EB) else Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, if (isSelected) Color(0xFF38BDF8) else Color(0xFF334155)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = zone.name,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) Color.White else Color(0xFFCBD5E1),
+                            maxLines = 1
+                        )
+                        Text(
+                            text = zone.dimensionLabel,
+                            fontSize = 9.sp,
+                            color = if (isSelected) Color(0xFFBAE6FD) else Color(0xFF64748B),
+                            maxLines = 1
+                        )
                     }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                modifier = Modifier.testTag("quick_add_text_btn")
-            ) {
-                Text("Add", fontSize = 11.sp)
+                }
             }
         }
 
-        Text(
-            text = "ACTIVE CANVAS LAYERS (${layers.size})",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-        )
-
-        if (layers.isEmpty()) {
-            Text(
-                text = "No custom layers added. Click Add or choose from Presets.",
-                fontSize = 11.sp,
-                color = Color.Gray
-            )
-        } else {
-            layers.forEach { layer ->
-                val id = layer["id"] as? String ?: "layer"
-                val name = layer["name"] as? String ?: "Element"
-                val visible = layer["visible"] as? Boolean ?: true
-                val isSelected = selectedLayerId == id
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Garment Swatches", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(PRINTIFY_SWATCHES) { swatch ->
+                val isSelected = swatch.id == selectedColor.id
+                val colorVal = try {
+                    Color(android.graphics.Color.parseColor(swatch.hex))
+                } catch (_: Exception) {
+                    Color.DarkGray
+                }
 
                 Surface(
-                    onClick = { onSelectLayer(id) },
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) (if (isDarkTheme) Color(0xFF1E3A8A).copy(alpha = 0.4f) else Color(0xFFDBEAFE)) else (if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)),
-                    border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, if (isSelected) Color(0xFF2563EB) else Color(0xFF334155)),
-                    modifier = Modifier.fillMaxWidth().testTag("layer_card_$id")
+                    onClick = { onSelectColor(swatch) },
+                    shape = CircleShape,
+                    color = colorVal,
+                    border = BorderStroke(
+                        if (isSelected) 3.dp else 1.dp,
+                        if (isSelected) Color(0xFF38BDF8) else Color(0xFF475569)
+                    ),
+                    modifier = Modifier.size(34.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Default.Layers, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
-                            Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (isDarkTheme) Color.White else Color.Black)
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = { onReorder(id, "UP") },
-                                modifier = Modifier.size(28.dp).testTag("reorder_up_$id")
-                            ) {
-                                Icon(Icons.Default.ArrowUpward, contentDescription = "Move Up", modifier = Modifier.size(14.dp))
-                            }
-                            IconButton(
-                                onClick = { onReorder(id, "DOWN") },
-                                modifier = Modifier.size(28.dp).testTag("reorder_down_$id")
-                            ) {
-                                Icon(Icons.Default.ArrowDownward, contentDescription = "Move Down", modifier = Modifier.size(14.dp))
-                            }
-                            IconButton(
-                                onClick = { onToggleVisibility(id, !visible) },
-                                modifier = Modifier.size(28.dp).testTag("toggle_visibility_$id")
-                            ) {
-                                Icon(
-                                    imageVector = if (visible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Toggle Visibility",
-                                    tint = if (visible) Color(0xFF2563EB) else Color.Gray,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { onDelete(id) },
-                                modifier = Modifier.size(28.dp).testTag("delete_layer_$id")
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFEF4444), modifier = Modifier.size(14.dp))
-                            }
+                    if (isSelected) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = if (swatch.isLightText) Color.Black else Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
@@ -1932,601 +961,276 @@ fun MobileLayersTabContent(
 }
 
 @Composable
-fun MobileAddDesignTabContent(
-    onAddCustomText: (String) -> Unit,
-    onAddPreset: (ClipartPreset) -> Unit,
-    aiPrompt: String,
-    onAiPromptChange: (String) -> Unit,
-    isGeneratingAi: Boolean,
-    onGenerateAi: () -> Unit,
-    aiStatusMessage: String?,
-    isDarkTheme: Boolean
+private fun LayerStackInspector(
+    layers: List<PodVectorLayer>,
+    selectedLayerId: String?,
+    onSelectLayer: (String) -> Unit,
+    onUpdateLayer: (PodVectorLayer) -> Unit,
+    onReorder: (Int, Int) -> Unit,
+    onDelete: (String) -> Unit,
+    isDarkTheme: Boolean = true
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Clipart Presets Grid
-        Text(
-            text = "PRESET GRAPHICS & ARTWORK",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val selectedLayer = layers.find { it.id == selectedLayerId }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Layer Stack (${layers.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Top to Bottom", fontSize = 10.sp, color = Color(0xFF64748B))
+        }
+
+        layers.reversed().forEachIndexed { index, layer ->
+            val actualIdx = layers.size - 1 - index
+            val isSelected = layer.id == selectedLayerId
+
+            Surface(
+                onClick = { onSelectLayer(layer.id) },
+                shape = RoundedCornerShape(8.dp),
+                color = if (isSelected) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFF1E293B),
+                border = BorderStroke(1.dp, if (isSelected) Color(0xFF2563EB) else Color(0xFF334155)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = when (layer.type) {
+                                PodLayerType.TEXT -> Icons.Default.TextFields
+                                PodLayerType.AI_ART -> Icons.Default.AutoAwesome
+                                PodLayerType.SHAPE -> Icons.Default.Category
+                                else -> Icons.Default.Image
+                            },
+                            contentDescription = layer.name,
+                            tint = if (isSelected) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Column {
+                            Text(
+                                text = layer.name,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSelected) Color.White else Color(0xFFE2E8F0),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${layer.liveDpi} DPI • Scale ${(layer.scale * 100).toInt()}%",
+                                fontSize = 9.sp,
+                                color = if (layer.liveDpi >= 300) Color(0xFF10B981) else Color(0xFFF59E0B)
+                            )
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { onUpdateLayer(layer.copy(isVisible = !layer.isVisible)) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                if (layer.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Toggle Visibility",
+                                tint = if (layer.isVisible) Color(0xFF10B981) else Color.Gray,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { onDelete(layer.id) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color(0xFFEF4444), modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Selected Layer Precision Sliders
+        selectedLayer?.let { layer ->
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF0F172A),
+                border = BorderStroke(1.dp, Color(0xFF334155)),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Transform Precision", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Scale (${(layer.scale * 100).toInt()}%)", fontSize = 10.sp, color = Color.Gray)
+                        Text("${layer.liveDpi} DPI", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (layer.liveDpi >= 300) Color(0xFF10B981) else Color(0xFFF59E0B))
+                    }
+                    Slider(
+                        value = layer.scale,
+                        onValueChange = { onUpdateLayer(layer.copy(scale = it)) },
+                        valueRange = 0.3f..3.0f,
+                        colors = SliderDefaults.colors(thumbColor = Color(0xFF2563EB), activeTrackColor = Color(0xFF2563EB))
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Rotation (${layer.rotation.toInt()}°)", fontSize = 10.sp, color = Color.Gray)
+                        Text("Opacity (${(layer.opacity * 100).toInt()}%)", fontSize = 10.sp, color = Color.Gray)
+                    }
+                    Slider(
+                        value = layer.rotation,
+                        onValueChange = { onUpdateLayer(layer.copy(rotation = it)) },
+                        valueRange = -180f..180f,
+                        colors = SliderDefaults.colors(thumbColor = Color(0xFFF59E0B), activeTrackColor = Color(0xFFF59E0B))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddArtDesignPanel(
+    onAddText: (String, String, String) -> Unit,
+    onAddPreset: (ClipartPreset) -> Unit,
+    onGenerateAi: (String) -> Unit,
+    isDarkTheme: Boolean = true
+) {
+    var textInput by remember { mutableStateOf("KRITICAL LIMITZ") }
+    var fontSelected by remember { mutableStateOf("Gothic Chicano") }
+    var textTintHex by remember { mutableStateOf("#FFFFFF") }
+    var aiPromptInput by remember { mutableStateOf("Chicano payasa illustration with lowrider chrome and gothic lettering") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // 1. Custom Typography Section
+        Text("Custom Typography", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        OutlinedTextField(
+            value = textInput,
+            onValueChange = { textInput = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(8.dp),
+            placeholder = { Text("Enter text...", fontSize = 11.sp) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF1E293B),
+                unfocusedContainerColor = Color(0xFF1E293B)
+            )
         )
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(CLIPART_PRESETS) { preset ->
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("Gothic Chicano", "Heavy Blackletter", "Modern Sans", "Cyber Display").forEach { font ->
+                val isFontActive = fontSelected == font
+                Surface(
+                    onClick = { fontSelected = font },
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isFontActive) Color(0xFF2563EB) else Color(0xFF1E293B),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = font.split(" ").last(),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+                if (textInput.isNotBlank()) {
+                    onAddText(textInput, fontSelected, textTintHex)
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().height(38.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add Text", modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Add Typography Layer", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+
+        // 2. Streetwear Vector Clipart Library
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Underground Vector Library", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(STREETWEAR_CLIPART_PRESETS) { preset ->
                 Surface(
                     onClick = { onAddPreset(preset) },
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9),
-                    border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
-                    modifier = Modifier.testTag("add_preset_${preset.id}")
+                    color = Color(0xFF1E293B),
+                    border = BorderStroke(1.dp, Color(0xFF334155))
                 ) {
                     Column(
                         modifier = Modifier.padding(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color(android.graphics.Color.parseColor(preset.color)), CircleShape),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF0F172A),
+                            modifier = Modifier.size(32.dp)
                         ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Brush, contentDescription = preset.title, tint = Color(0xFF38BDF8), modifier = Modifier.padding(8.dp))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(preset.title, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = if (isDarkTheme) Color.White else Color.Black)
+                        Text(preset.title.take(16), fontSize = 10.sp, color = Color.White, maxLines = 1)
+                        Text(preset.category, fontSize = 8.sp, color = Color.Gray, maxLines = 1)
                     }
                 }
             }
         }
 
-        // AI Mockup Prompt Formulation Engine
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = Color(0xFF8B5CF6).copy(alpha = 0.15f),
-            border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "LEAD AUTONOMOUS DESIGN DIRECTOR AI",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFA78BFA)
-                    )
-                }
-                Text(
-                    text = "Kritical Limitz (KL) • Luxury Underground POD Brand",
-                    fontSize = 9.sp,
-                    color = if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFF475569)
-                )
-            }
-        }
-
-        Text(
-            text = "THEMATIC PILLARS (TAP TO FORMULATE):",
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            listOf(
-                "Chicano Street" to "Hyper-detailed fine-line black and grey illustration, custom gothic lettering 'Kritical Limitz', realistic portraiture with payasa makeup, lowrider chrome artifacts, and gritty urban textures. Master-Class contrast stippling, full back print. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
-                "Dark Occult Sigil" to "Dark occult surrealism, intricate pentagram and satanic sigils, demonic horned skull bound in barbed wire, deep ink-bleeding shadows, 3D realism on black streetwear blank. Master-Class execution. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
-                "Egyptian Mysticism" to "Luxury Egyptian mysticism streetwear graphic, hyper-detailed scarab beetle with outstretched wings, golden Ankh, Eye of Horus, surrounded by ancient hieroglyphic script and KL monogram. Dramatic lighting. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
-                "Paisley & Barbed Wire" to "Deeply intricate paisley seamless pattern infused with razor barbed wire, brass knuckles, spiked crown, visceral splatter ink dynamics, high contrast luxury underground streetwear. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
-            ).forEach { (pillarName, pillarPrompt) ->
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9),
-                    border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f)),
-                    modifier = Modifier.clickable { onAiPromptChange(pillarPrompt) }
-                ) {
-                    Text(
-                        text = pillarName,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFA78BFA),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-
+        // 3. AI Design Director Synthesis
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("AI Design Director Synthesis", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
         OutlinedTextField(
-            value = aiPrompt,
-            onValueChange = onAiPromptChange,
-            label = { Text("Master Prompt Payload", fontSize = 11.sp) },
-            modifier = Modifier.fillMaxWidth().testTag("ai_mockup_prompt_input")
-        )
-        Button(
-            onClick = onGenerateAi,
-            enabled = !isGeneratingAi,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
-            modifier = Modifier.fillMaxWidth().testTag("generate_ai_mockup_btn")
-        ) {
-            if (isGeneratingAi) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Synthesizing Artwork...", fontSize = 12.sp)
-            } else {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Queue Mockup Rendering", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-        aiStatusMessage?.let { msg ->
-            Text(text = msg, fontSize = 10.sp, color = Color(0xFF10B981))
-        }
-    }
-}
-
-@Composable
-fun MobilePayloadTabContent(
-    payloadJson: String,
-    onPublish: () -> Unit,
-    isPublishing: Boolean,
-    product: DesktopProductBlank,
-    color: DesktopColorSwatch,
-    isDarkTheme: Boolean
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Profit & Margin Summary
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9),
-            border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Retail Price: $${product.retailPriceCents / 100.0}", fontSize = 11.sp, color = Color.Gray)
-                    Text("COGS: $${product.cogsCents / 100.0}", fontSize = 11.sp, color = Color.Gray)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    val profit = (product.retailPriceCents - product.cogsCents) / 100.0
-                    Text("Profit: +$$profit", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
-                    Text("57% Margin", fontSize = 10.sp, color = Color(0xFF10B981))
-                }
-            }
-        }
-
-        // Live Printify 300 DPI JSON Payload
-        Text(
-            text = "LIVE 300 DPI PRINTIFY JSON PAYLOAD",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-        )
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (isDarkTheme) Color(0xFF020617) else Color(0xFF1E293B),
-            modifier = Modifier.fillMaxWidth().height(160.dp)
-        ) {
-            Text(
-                text = payloadJson,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 9.sp,
-                color = Color(0xFF38BDF8),
-                lineHeight = 12.sp,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .verticalScroll(rememberScrollState())
-            )
-        }
-
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = Color(0xFFF59E0B).copy(alpha = 0.12f),
-            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text(
-                    text = "HARD BOUNDARY: NO UNAUTHORIZED STOREFRONT PUBLISHING",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF59E0B)
-                )
-                Text(
-                    text = "Designs are held in PENDING STAGING. Requires human administrator verification.\n[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
-                    fontSize = 9.sp,
-                    color = Color(0xFFE2E8F0)
-                )
-            }
-        }
-
-        Button(
-            onClick = onPublish,
-            enabled = !isPublishing,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-            modifier = Modifier.fillMaxWidth().testTag("publish_bottom_btn")
-        ) {
-            if (isPublishing) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Staging in Room Database...")
-            } else {
-                Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Stage Design (Awaiting Human Approval)", fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-// ============================================================================
-// LIFESTYLE MOCKUP PREVIEW SCREEN (Printify Clone)
-// ============================================================================
-
-@Composable
-fun LifestyleMockupPreviewView(
-    product: DesktopProductBlank,
-    color: DesktopColorSwatch,
-    zone: DesktopPrintZone,
-    layers: List<Map<String, Any>>,
-    onPublish: () -> Unit,
-    isPublishing: Boolean,
-    isDarkTheme: Boolean
-) {
-    var previewStyle by remember { mutableStateOf("Studio Model") } // "Studio Model", "Flat Lay", "Folded"
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // Lifestyle Perspective Selector
-        Row(
+            value = aiPromptInput,
+            onValueChange = { aiPromptInput = it },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("Studio Model", "Flat Lay", "Folded").forEach { style ->
-                FilterChip(
-                    selected = previewStyle == style,
-                    onClick = { previewStyle = style },
-                    label = { Text(style, fontSize = 11.sp) },
-                    modifier = Modifier.testTag("preview_style_$style")
-                )
-            }
-        }
-
-        // High-Fidelity Mockup Composite Card
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(340.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = if (isDarkTheme) Color(0xFF1E293B) else Color.White,
-            shadowElevation = 8.dp,
-            border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0))
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                val garmentColor = Color(android.graphics.Color.parseColor(color.hex))
-                Canvas(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-                    val w = size.width
-                    val h = size.height
-
-                    val path = Path().apply {
-                        moveTo(w * 0.32f, h * 0.10f)
-                        cubicTo(w * 0.38f, h * 0.15f, w * 0.62f, h * 0.15f, w * 0.68f, h * 0.10f)
-                        lineTo(w * 0.88f, h * 0.22f)
-                        cubicTo(w * 0.93f, h * 0.27f, w * 0.89f, h * 0.35f, w * 0.83f, h * 0.40f)
-                        lineTo(w * 0.77f, h * 0.44f)
-                        lineTo(w * 0.78f, h * 0.92f)
-                        lineTo(w * 0.22f, h * 0.92f)
-                        lineTo(w * 0.23f, h * 0.44f)
-                        lineTo(w * 0.17f, h * 0.40f)
-                        cubicTo(w * 0.11f, h * 0.35f, w * 0.07f, h * 0.27f, w * 0.12f, h * 0.22f)
-                        close()
-                    }
-
-                    drawPath(path, color = Color.Black.copy(alpha = 0.30f))
-                    drawPath(path, color = garmentColor)
-
-                    // Draw applied print layers centered on the mockup
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.9f),
-                        radius = 38.dp.toPx(),
-                        center = androidx.compose.ui.geometry.Offset(w * 0.50f, h * 0.42f)
-                    )
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.Black.copy(alpha = 0.75f)
-                ) {
-                    Text(
-                        text = "High-Res 300 DPI Render",
-                        fontSize = 10.sp,
-                        color = Color(0xFF10B981),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-
-        // Live E-Commerce Margin Breakdown Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-            ),
-            border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "COMMERCIAL PROFIT METRICS",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Customer Retail Price", fontSize = 13.sp)
-                    Text("$${product.retailPriceCents / 100.0}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Printify / Monster Digital COGS", fontSize = 13.sp)
-                    Text("-$${product.cogsCents / 100.0}", fontSize = 13.sp, color = Color(0xFFEF4444))
-                }
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Net Profit per Sale", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    val net = (product.retailPriceCents - product.cogsCents) / 100.0
-                    Text("+$${String.format("%.2f", net)} (57% Margin)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
-                }
-            }
-        }
-
-        // Direct Staging Button
-        Button(
-            onClick = onPublish,
-            enabled = !isPublishing,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .testTag("preview_publish_btn")
-        ) {
-            if (isPublishing) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Staging Mockup in Database...")
-            } else {
-                Icon(Icons.Default.VerifiedUser, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Stage Design (Awaiting Human Approval)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-// ============================================================================
-// DESKTOP / TABLET DUAL-PANE WORKSPACE (RESPONSIVE FALLBACK)
-// ============================================================================
-
-@Composable
-fun DesktopDualPaneWorkspace(
-    selectedProduct: DesktopProductBlank,
-    selectedColor: DesktopColorSwatch,
-    currentZone: DesktopPrintZone,
-    selectedZoneKey: String,
-    onSelectZone: (String) -> Unit,
-    onSelectProduct: (DesktopProductBlank) -> Unit,
-    onSelectColor: (DesktopColorSwatch) -> Unit,
-    onAutoScale: (PodAutoScaler.ScalingMode) -> Unit,
-    webViewRef: WebView?,
-    onWebViewReady: (WebView) -> Unit,
-    onTelemetryUpdated: (String) -> Unit,
-    onLayerSelected: (String) -> Unit,
-    selectedLayerId: String,
-    parsedLayers: List<Map<String, Any>>,
-    formattedPayload: String,
-    onPublish: () -> Unit,
-    isPublishing: Boolean,
-    aiPrompt: String,
-    onAiPromptChange: (String) -> Unit,
-    isGeneratingAi: Boolean,
-    onGenerateAi: () -> Unit,
-    aiStatusMessage: String?,
-    onAddCustomText: (String) -> Unit,
-    onAddPreset: (ClipartPreset) -> Unit,
-    isDarkTheme: Boolean,
-    centerCanvasBg: Color
-) {
-    Row(modifier = Modifier.fillMaxSize()) {
-        // Left Controls (300dp)
-        Column(
-            modifier = Modifier
-                .width(300.dp)
-                .fillMaxHeight()
-                .background(if (isDarkTheme) Color(0xFF1E293B) else Color.White)
-                .border(BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)))
-                .padding(14.dp)
-        ) {
-            MobileGarmentTabContent(
-                selectedProduct = selectedProduct,
-                onSelectProduct = onSelectProduct,
-                selectedColor = selectedColor,
-                onSelectColor = onSelectColor,
-                selectedZoneKey = selectedZoneKey,
-                onSelectZone = onSelectZone,
-                isDarkTheme = isDarkTheme
+            maxLines = 2,
+            shape = RoundedCornerShape(8.dp),
+            placeholder = { Text("Prompt 300 DPI vector artwork...", fontSize = 11.sp) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF1E293B),
+                unfocusedContainerColor = Color(0xFF1E293B)
             )
-        }
+        )
 
-        // Center Canvas (Flex weight 1f)
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .background(centerCanvasBg),
-            contentAlignment = Alignment.Center
+        Button(
+            onClick = {
+                if (aiPromptInput.isNotBlank()) {
+                    onGenerateAi(aiPromptInput)
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().height(38.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(width = (currentZone.widthPx * 1.2f).dp, height = (currentZone.heightPx * 1.2f).dp)
-                    .border(BorderStroke(1.5.dp, Color(0xFF22D3EE)), RoundedCornerShape(4.dp))
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            settings.apply {
-                                javaScriptEnabled = true
-                                domStorageEnabled = true
-                                loadWithOverviewMode = true
-                                useWideViewPort = true
-                                cacheMode = WebSettings.LOAD_DEFAULT
-                                allowFileAccess = false
-                            }
-                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                            setLayerType(WebView.LAYER_TYPE_HARDWARE, null)
-                            webChromeClient = WebChromeClient()
-                            webViewClient = WebViewClient()
-                            val bridge = PodFabricBridge(
-                                onPayloadUpdated = onTelemetryUpdated,
-                                onLayerSelected = onLayerSelected
-                            )
-                            addJavascriptInterface(bridge, "PodBridge")
-                            loadDataWithBaseURL(
-                                "https://printdefy.local/",
-                                generateFabricHtml(currentZone.widthPx, currentZone.heightPx),
-                                "text/html",
-                                "UTF-8",
-                                null
-                            )
-                            onWebViewReady(this)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-
-        // Right Controls (320dp) with full multi-tab workflow
-        var desktopRightTab by remember { mutableStateOf(PodMobileStudioTab.LAYERS) }
-        Column(
-            modifier = Modifier
-                .width(320.dp)
-                .fillMaxHeight()
-                .background(if (isDarkTheme) Color(0xFF1E293B) else Color.White)
-                .border(BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)))
-                .padding(12.dp)
-        ) {
-            // Tab Header Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(if (isDarkTheme) Color(0xFF0F172A) else Color(0xFFF1F5F9), RoundedCornerShape(8.dp))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                listOf(
-                    PodMobileStudioTab.LAYERS to "Layers",
-                    PodMobileStudioTab.ADD_DESIGN to "Add/AI",
-                    PodMobileStudioTab.PAYLOAD to "Payload"
-                ).forEach { (tab, label) ->
-                    val isSelected = desktopRightTab == tab
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isSelected) Color(0xFF2563EB) else Color.Transparent)
-                            .clickable { desktopRightTab = tab }
-                            .padding(vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) Color.White else (if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B))
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            when (desktopRightTab) {
-                PodMobileStudioTab.LAYERS -> {
-                    MobileLayersTabContent(
-                        layers = parsedLayers,
-                        selectedLayerId = selectedLayerId,
-                        onSelectLayer = { id -> webViewRef?.evaluateJavascript("window.selectLayer('$id');", null) },
-                        onToggleVisibility = { id, vis -> webViewRef?.evaluateJavascript("window.toggleLayer('$id', $vis);", null) },
-                        onReorder = { id, dir -> webViewRef?.evaluateJavascript("window.reorderLayer('$id', '$dir');", null) },
-                        onDelete = { id -> webViewRef?.evaluateJavascript("window.removeLayer('$id');", null) },
-                        onAddText = onAddCustomText,
-                        isDarkTheme = isDarkTheme
-                    )
-                }
-                PodMobileStudioTab.ADD_DESIGN -> {
-                    MobileAddDesignTabContent(
-                        onAddCustomText = onAddCustomText,
-                        onAddPreset = onAddPreset,
-                        aiPrompt = aiPrompt,
-                        onAiPromptChange = onAiPromptChange,
-                        isGeneratingAi = isGeneratingAi,
-                        onGenerateAi = onGenerateAi,
-                        aiStatusMessage = aiStatusMessage,
-                        isDarkTheme = isDarkTheme
-                    )
-                }
-                PodMobileStudioTab.PAYLOAD -> {
-                    MobilePayloadTabContent(
-                        payloadJson = formattedPayload,
-                        onPublish = onPublish,
-                        isPublishing = isPublishing,
-                        product = selectedProduct,
-                        color = selectedColor,
-                        isDarkTheme = isDarkTheme
-                    )
-                }
-                else -> {}
-            }
+            Icon(Icons.Default.AutoAwesome, contentDescription = "Synthesize", modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Synthesize 300 DPI Vector Layer", fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

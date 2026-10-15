@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
         @Database(
@@ -25,9 +26,10 @@ import kotlinx.coroutines.launch
         AgentMessageEntity::class,
         DigitalProductEntity::class,
         GodAuditVerdictEntity::class,
-        PodOrderEntity::class
+        PodOrderEntity::class,
+        PendingTransactionEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun digitalProductDao(): DigitalProductDao
     abstract fun godAuditDao(): GodAuditDao
     abstract fun podOrderDao(): PodOrderDao
+    abstract fun pendingTransactionDao(): PendingTransactionDao
 
 
     companion object {
@@ -84,9 +87,110 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE?.let { database ->
                     scope.launch(Dispatchers.IO) {
                         ensureGodAgentSeeded(database)
+                        ensurePendingTransactionsSeeded(database)
                     }
                 }
             }
+        }
+
+        /**
+         * Ensures initial real-world pending transactions requiring human authorization are available.
+         */
+        suspend fun ensurePendingTransactionsSeeded(db: AppDatabase) {
+            try {
+                val count = db.pendingTransactionDao().getAllTransactions().first().size
+                if (count == 0) {
+                    val now = System.currentTimeMillis()
+                    val initialTx = listOf(
+                        PendingTransactionEntity(
+                            id = "TX-APPR-101",
+                            transactionCode = "TX-POD-77401",
+                            title = "Printify Heavyweight Garment Production Batch",
+                            description = "Automated fulfillment batch for 14 Acid Wash Vintage Streetwear Tees with 300 DPI vector placement.",
+                            storeOrEntity = "Print Defy Studio",
+                            platform = "Printify POD Gateway",
+                            vendorOrPayee = "SwiftPOD Fulfillment Center (US)",
+                            accountDebit = "5010 Cost of Goods Sold",
+                            accountCredit = "1010 Operating Cash Clearing",
+                            amountCents = 17500L,
+                            category = "COGS",
+                            riskScore = 18,
+                            riskReason = "Automated audit passed: Validated customer deposit exceeds COGS by 54%.",
+                            status = "PENDING",
+                            createdAt = now - 1800000L
+                        ),
+                        PendingTransactionEntity(
+                            id = "TX-APPR-102",
+                            transactionCode = "TX-REF-88912",
+                            title = "Customer Size Exchange Refund Request",
+                            description = "Customer requested size exchange adjustment for Order #ORD-9921 (Oversized Hoodie).",
+                            storeOrEntity = "kriticallimitz.printify.me",
+                            platform = "Stripe Payments",
+                            vendorOrPayee = "sarah.miller@example.com",
+                            accountDebit = "4030 Sales Returns & Allowances",
+                            accountCredit = "1020 Customer Accounts Receivable",
+                            amountCents = 3450L,
+                            category = "REFUND",
+                            riskScore = 35,
+                            riskReason = "Requires manual confirmation: Discretionary exchange balance.",
+                            status = "PENDING",
+                            createdAt = now - 3600000L
+                        ),
+                        PendingTransactionEntity(
+                            id = "TX-APPR-103",
+                            transactionCode = "TX-LOG-33019",
+                            title = "Expedited Priority Carrier Freight Dispatch",
+                            description = "FedEx priority logistics dispatch for bulk pop-up physical merchandise inventory transfer.",
+                            storeOrEntity = "Print Defy Logistics",
+                            platform = "FedEx API Direct",
+                            vendorOrPayee = "FedEx Express Corp",
+                            accountDebit = "5020 Shipping & Logistics Expense",
+                            accountCredit = "1010 Operating Cash Clearing",
+                            amountCents = 6840L,
+                            category = "VENDOR_EXPENSE",
+                            riskScore = 14,
+                            riskReason = "Automated rate quote matched against standard commercial shipping matrix.",
+                            status = "PENDING",
+                            createdAt = now - 7200000L
+                        ),
+                        PendingTransactionEntity(
+                            id = "TX-APPR-104",
+                            transactionCode = "TX-ROY-44120",
+                            title = "Digital Creator Royalty Revenue Payout",
+                            description = "Weekly 100% margin net digital revenue payout allocation to creator treasury wallet.",
+                            storeOrEntity = "Autonomous Studio",
+                            platform = "Stripe Connect ACH",
+                            vendorOrPayee = "Treasury Reserve Payout",
+                            accountDebit = "3010 Creator Retained Earnings",
+                            accountCredit = "1010 Operating Cash Clearing",
+                            amountCents = 42000L,
+                            category = "PAYOUT",
+                            riskScore = 22,
+                            riskReason = "Threshold alert: Single transaction payout exceeds $250.00 security checkpoint.",
+                            status = "PENDING",
+                            createdAt = now - 14400000L
+                        ),
+                        PendingTransactionEntity(
+                            id = "TX-APPR-105",
+                            transactionCode = "TX-RAW-55091",
+                            title = "Wholesale Ceramic Mugs Raw Restock",
+                            description = "Restock invoice for 36 11oz High-Gloss Ceramic Vector Mugs with eco-friendly protective packaging.",
+                            storeOrEntity = "Print Defy Studio",
+                            platform = "Printify Gateway",
+                            vendorOrPayee = "District Photo Inc",
+                            accountDebit = "1030 Merchandise Inventory Asset",
+                            accountCredit = "2010 Accounts Payable",
+                            amountCents = 8820L,
+                            category = "COGS",
+                            riskScore = 12,
+                            riskReason = "Automated clearance: Verified below wholesale bulk discount threshold.",
+                            status = "PENDING",
+                            createdAt = now - 28800000L
+                        )
+                    )
+                    db.pendingTransactionDao().insertTransactions(initialTx)
+                }
+            } catch (_: Exception) {}
         }
 
         /**

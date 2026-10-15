@@ -80,6 +80,12 @@ fun ApprovalsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
+                        selected = selectedFilter == "TRANSACTIONS",
+                        onClick = { selectedFilter = "TRANSACTIONS" },
+                        label = { Text("Transactions (${viewModel.pendingTransactions.collectAsState().value.size})") },
+                        modifier = Modifier.testTag("filter_transactions_chip")
+                    )
+                    FilterChip(
                         selected = selectedFilter == "ALL",
                         onClick = { selectedFilter = "ALL" },
                         label = { Text("All (${decisions.size})") },
@@ -147,7 +153,12 @@ fun ApprovalsScreen(
             }
         }
     ) { paddingValues ->
-        if (selectedFilter == "GOD_FLAGGED") {
+        if (selectedFilter == "TRANSACTIONS") {
+            PendingTransactionsScreen(
+                viewModel = viewModel,
+                modifier = Modifier.padding(paddingValues)
+            )
+        } else if (selectedFilter == "GOD_FLAGGED") {
             if (godHaltedVerdicts.isEmpty()) {
                 Box(
                     modifier = Modifier

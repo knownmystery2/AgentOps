@@ -294,3 +294,31 @@ abstract class PodOrderDao {
     }
 }
 
+@Dao
+interface PendingTransactionDao {
+    @Query("SELECT * FROM pending_transactions ORDER BY createdAt DESC")
+    fun getAllTransactions(): Flow<List<PendingTransactionEntity>>
+
+    @Query("SELECT * FROM pending_transactions WHERE status = 'PENDING' ORDER BY createdAt DESC")
+    fun getPendingTransactions(): Flow<List<PendingTransactionEntity>>
+
+    @Query("SELECT * FROM pending_transactions WHERE id = :id LIMIT 1")
+    suspend fun getTransactionById(id: String): PendingTransactionEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransaction(transaction: PendingTransactionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransactions(transactions: List<PendingTransactionEntity>)
+
+    @Query("UPDATE pending_transactions SET status = :status, reviewedAt = :reviewedAt WHERE id = :id")
+    suspend fun updateTransactionStatus(id: String, status: String, reviewedAt: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM pending_transactions WHERE id = :id")
+    suspend fun deleteTransaction(id: String)
+
+    @Query("DELETE FROM pending_transactions")
+    suspend fun clearAll()
+}
+
+

@@ -1,36 +1,59 @@
 package com.opensource.autonomous.agent.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import com.opensource.autonomous.agent.ui.pod.*
 
 @Composable
-fun PrintifyCanvas() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.LightGray),
-        contentAlignment = Alignment.Center
-    ) {
-        // Garment Template
-        Box(
-            modifier = Modifier
-                .size(300.dp, 400.dp)
-                .background(Color.White)
-        ) {
-            // Print Area
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(150.dp, 200.dp)
-                    .border(2.dp, MaterialTheme.colorScheme.primary)
+fun PrintifyCanvas(
+    product: PrintifyProductBlank = PRINTIFY_CATALOG[0],
+    color: PrintifyColorSwatch = PRINTIFY_SWATCHES[0],
+    zone: PrintifyPrintZone = PRINTIFY_ZONES["chest"]!!
+) {
+    var layers by remember {
+        mutableStateOf(
+            listOf(
+                PodVectorLayer(
+                    id = "layer_base_crest",
+                    name = "KL Signature Crest",
+                    type = PodLayerType.VECTOR,
+                    textContent = "Kritical Limitz",
+                    scale = 1.0f,
+                    tintHex = "#FFFFFF"
+                )
             )
-        }
+        )
+    }
+    var selectedLayerId by remember { mutableStateOf<String?>("layer_base_crest") }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        PodVectorCanvas(
+            product = product,
+            color = color,
+            zone = zone,
+            layers = layers,
+            selectedLayerId = selectedLayerId,
+            onSelectLayer = { selectedLayerId = it },
+            onUpdateLayer = { updated ->
+                layers = layers.map { if (it.id == updated.id) updated else it }
+            },
+            onDuplicateLayer = { orig ->
+                val copy = orig.copy(
+                    id = "layer_${System.currentTimeMillis() % 10000}",
+                    name = "${orig.name} (Copy)",
+                    offsetX = orig.offsetX + 15f,
+                    offsetY = orig.offsetY + 15f
+                )
+                layers = layers + copy
+                selectedLayerId = copy.id
+            },
+            onDeleteLayer = { id ->
+                layers = layers.filter { it.id != id }
+                if (selectedLayerId == id) selectedLayerId = layers.lastOrNull()?.id
+            },
+            isDarkTheme = true
+        )
     }
 }

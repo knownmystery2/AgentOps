@@ -169,32 +169,30 @@ class ApprovalRegisterViewModel(
      * Confirms and approves a pending business action, immediately executing it.
      */
     fun confirmAction(decisionId: String, userNotes: String? = null) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _isProcessingAction.value = true
             try {
-                withContext(Dispatchers.IO) {
-                    decisionDao.updateDecisionStatus(decisionId, "APPROVED")
-                    
-                    // Dispatch execution into active task pipeline
-                    val task = TaskEntity(
-                        id = "EXEC-$decisionId",
-                        assignedToAgentId = "1",
-                        title = "Execute Confirmed Action: $decisionId",
-                        instruction = "User confirmed action $decisionId. ${userNotes?.let { "Notes: $it" } ?: ""}",
-                        status = "COMPLETED",
-                        result = "Executed successfully upon user confirmation.",
+                decisionDao.updateDecisionStatus(decisionId, "APPROVED")
+                
+                // Dispatch execution into active task pipeline
+                val task = TaskEntity(
+                    id = "EXEC-$decisionId",
+                    assignedToAgentId = "1",
+                    title = "Execute Confirmed Action: $decisionId",
+                    instruction = "User confirmed action $decisionId. ${userNotes?.let { "Notes: $it" } ?: ""}",
+                    status = "COMPLETED",
+                    result = "Executed successfully upon user confirmation.",
+                    timestamp = System.currentTimeMillis()
+                )
+                taskDao.insertTask(task)
+
+                logDao.insertLog(
+                    LogEntity(
+                        agentId = "Administrator AI",
+                        message = "User CONFIRMED business action $decisionId. Execution triggered.",
                         timestamp = System.currentTimeMillis()
                     )
-                    taskDao.insertTask(task)
-
-                    logDao.insertLog(
-                        LogEntity(
-                            agentId = "Administrator AI",
-                            message = "User CONFIRMED business action $decisionId. Execution triggered.",
-                            timestamp = System.currentTimeMillis()
-                        )
-                    )
-                }
+                )
                 _statusMessage.value = "Action confirmed and executed: $decisionId"
             } catch (e: Exception) {
                 _statusMessage.value = "Error confirming action: ${e.message}"
@@ -208,19 +206,17 @@ class ApprovalRegisterViewModel(
      * Rejects a pending business action with an optional explanation.
      */
     fun rejectAction(decisionId: String, reason: String? = null) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _isProcessingAction.value = true
             try {
-                withContext(Dispatchers.IO) {
-                    decisionDao.updateDecisionStatus(decisionId, "REJECTED")
-                    logDao.insertLog(
-                        LogEntity(
-                            agentId = "Compliance Agent",
-                            message = "User REJECTED business action $decisionId. ${reason?.let { "Reason: $it" } ?: "Execution blocked by user."}",
-                            timestamp = System.currentTimeMillis()
-                        )
+                decisionDao.updateDecisionStatus(decisionId, "REJECTED")
+                logDao.insertLog(
+                    LogEntity(
+                        agentId = "Compliance Agent",
+                        message = "User REJECTED business action $decisionId. ${reason?.let { "Reason: $it" } ?: "Execution blocked by user."}",
+                        timestamp = System.currentTimeMillis()
                     )
-                }
+                )
                 _statusMessage.value = "Action rejected: $decisionId"
             } catch (e: Exception) {
                 _statusMessage.value = "Error rejecting action: ${e.message}"
@@ -234,21 +230,19 @@ class ApprovalRegisterViewModel(
      * Batch confirm multiple pending actions at once.
      */
     fun batchConfirm(decisionIds: List<String>) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _isProcessingAction.value = true
             try {
-                withContext(Dispatchers.IO) {
-                    decisionIds.forEach { id ->
-                        decisionDao.updateDecisionStatus(id, "APPROVED")
-                    }
-                    logDao.insertLog(
-                        LogEntity(
-                            agentId = "Administrator AI",
-                            message = "Batch confirmed ${decisionIds.size} business actions.",
-                            timestamp = System.currentTimeMillis()
-                        )
-                    )
+                decisionIds.forEach { id ->
+                    decisionDao.updateDecisionStatus(id, "APPROVED")
                 }
+                logDao.insertLog(
+                    LogEntity(
+                        agentId = "Administrator AI",
+                        message = "Batch confirmed ${decisionIds.size} business actions.",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
                 _statusMessage.value = "Batch confirmed ${decisionIds.size} actions"
             } finally {
                 _isProcessingAction.value = false
@@ -260,21 +254,19 @@ class ApprovalRegisterViewModel(
      * Batch reject multiple pending actions.
      */
     fun batchReject(decisionIds: List<String>) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _isProcessingAction.value = true
             try {
-                withContext(Dispatchers.IO) {
-                    decisionIds.forEach { id ->
-                        decisionDao.updateDecisionStatus(id, "REJECTED")
-                    }
-                    logDao.insertLog(
-                        LogEntity(
-                            agentId = "Compliance Agent",
-                            message = "Batch rejected ${decisionIds.size} business actions.",
-                            timestamp = System.currentTimeMillis()
-                        )
-                    )
+                decisionIds.forEach { id ->
+                    decisionDao.updateDecisionStatus(id, "REJECTED")
                 }
+                logDao.insertLog(
+                    LogEntity(
+                        agentId = "Compliance Agent",
+                        message = "Batch rejected ${decisionIds.size} business actions.",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
                 _statusMessage.value = "Batch rejected ${decisionIds.size} actions"
             } finally {
                 _isProcessingAction.value = false

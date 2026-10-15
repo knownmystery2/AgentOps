@@ -95,6 +95,11 @@ open class MainViewModel(
     val ledgerEntries: StateFlow<List<LedgerEntity>> = repository.getLedgerEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val pendingTransactions: StateFlow<List<PendingTransactionEntity>> = repository.getPendingTransactions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allTransactions: StateFlow<List<PendingTransactionEntity>> = repository.getAllTransactions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val accountTasks: StateFlow<List<AccountTaskEntity>> = repository.getAccountTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -558,6 +563,106 @@ open class MainViewModel(
                 )
             )
         }
+    }
+
+    val transactionApprovalStatusMessage = MutableStateFlow<String?>(null)
+    val isProcessingTransaction = MutableStateFlow(false)
+
+    fun approveTransaction(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            isProcessingTransaction.value = true
+            try {
+                val res = repository.approvePendingTransaction(id)
+                if (res.isSuccess) {
+                    transactionApprovalStatusMessage.value = "Transaction $id approved and posted to ledger."
+                } else {
+                    transactionApprovalStatusMessage.value = "Failed to approve transaction: ${res.exceptionOrNull()?.message}"
+                }
+            } finally {
+                isProcessingTransaction.value = false
+            }
+        }
+    }
+
+    fun rejectTransaction(id: String, reason: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            isProcessingTransaction.value = true
+            try {
+                val res = repository.rejectPendingTransaction(id, reason)
+                if (res.isSuccess) {
+                    transactionApprovalStatusMessage.value = "Transaction $id rejected."
+                } else {
+                    transactionApprovalStatusMessage.value = "Failed to reject transaction: ${res.exceptionOrNull()?.message}"
+                }
+            } finally {
+                isProcessingTransaction.value = false
+            }
+        }
+    }
+
+    fun createPendingTransaction(
+        title: String,
+        description: String,
+        amountCents: Long,
+        category: String = "COGS",
+        platform: String = "Printify Gateway",
+        vendorOrPayee: String = "Supplier / Vendor",
+        accountDebit: String = "5010 Cost of Goods Sold",
+        accountCredit: String = "1010 Operating Cash Clearing",
+        riskScore: Int = 15,
+        riskReason: String = "Custom authorization required."
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val code = "TX-REQ-" + (now % 100000)
+            val tx = PendingTransactionEntity(
+                id = "TX-APPR-" + UUID.randomUUID().toString().take(6).uppercase(),
+                transactionCode = code,
+                title = title,
+                description = description,
+                storeOrEntity = settings.value?.businessName ?: "Print Defy Studio",
+                platform = platform,
+                vendorOrPayee = vendorOrPayee,
+                accountDebit = accountDebit,
+                accountCredit = accountCredit,
+                amountCents = amountCents,
+                category = category,
+                riskScore = riskScore,
+                riskReason = riskReason,
+                status = "PENDING",
+                createdAt = now
+            )
+            repository.insertPendingTransaction(tx)
+            transactionApprovalStatusMessage.value = "Registered new pending transaction $code ($${amountCents / 100.0})"
+        }
+    }
+
+    fun batchApproveTransactions(ids: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            isProcessingTransaction.value = true
+            try {
+                repository.batchApproveTransactions(ids)
+                transactionApprovalStatusMessage.value = "Batch approved ${ids.size} transactions."
+            } finally {
+                isProcessingTransaction.value = false
+            }
+        }
+    }
+
+    fun batchRejectTransactions(ids: List<String>, reason: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            isProcessingTransaction.value = true
+            try {
+                repository.batchRejectTransactions(ids, reason)
+                transactionApprovalStatusMessage.value = "Batch rejected ${ids.size} transactions."
+            } finally {
+                isProcessingTransaction.value = false
+            }
+        }
+    }
+
+    fun clearTransactionStatusMessage() {
+        transactionApprovalStatusMessage.value = null
     }
 
     fun recordManualSale(store: String, platform: String, grossCents: Long, cogsCents: Long, feeCents: Long, desc: String) {
