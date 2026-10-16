@@ -27,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandEmerald
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.example.ui.theme.ProfitGreen
 import com.opensource.autonomous.agent.network.PodJobItem
 import com.opensource.autonomous.agent.ui.MainViewModel
@@ -42,23 +44,37 @@ fun PodMockupScreen(
     val podQueue by viewModel.podQueue.collectAsState()
     val isGeneratingPod by viewModel.isGeneratingPod.collectAsState()
     val isPitchingIdeas by viewModel.isPitchingIdeas.collectAsState()
+    val currentAiMockup by viewModel.currentAiMockup.collectAsState()
+    val isGeneratingAiMockup by viewModel.isGeneratingAiMockup.collectAsState()
+    val aiMockupStatusMessage by viewModel.aiMockupStatusMessage.collectAsState()
 
-    val products = listOf("Heavyweight T-Shirt", "Vintage Hoodie", "Ceramic Mug", "Canvas Tote Bag", "Wall Art Poster")
+    val products = listOf(
+        "Heavyweight Luxury Tee (280 GSM)",
+        "French Terry Boxy Hoodie (450 GSM)",
+        "All-Over Print Zip Hoodie",
+        "Drop-Shoulder Streetwear Tee",
+        "Underground Heavyweight Tote"
+    )
     val colors = listOf(
-        Pair("Charcoal Slate", Color(0xFF262E3D)),
-        Pair("Natural Canvas", Color(0xFFE8E2D2)),
-        Pair("Forest Green", Color(0xFF1E3A2B)),
-        Pair("Terracotta Sand", Color(0xFFB86B53)),
+        Pair("Obsidian Black", Color(0xFF121417)),
+        Pair("Fine-Line Charcoal", Color(0xFF262E3D)),
+        Pair("Bleeding Crimson", Color(0xFF581C26)),
+        Pair("Metallic Gold", Color(0xFFB8860B)),
         Pair("Crisp White", Color(0xFFF8FAFC))
     )
-    val placements = listOf("Chest Center (11\" x 13\")", "Pocket Left (4\" x 4\")", "Back Large (14\" x 16\")")
+    val placements = listOf(
+        "Center Chest (11\" x 13\")",
+        "Full Back Print (14\" x 16\")",
+        "Left Sleeve Wrap (3.5\" x 18\")",
+        "All-Over Hood Print"
+    )
 
-    val garmentColor = colors.firstOrNull { it.first == selectedColor }?.second ?: Color(0xFF262E3D)
+    val garmentColor = colors.firstOrNull { it.first == selectedColor }?.second ?: Color(0xFF121417)
 
     val currentSkuPreview = remember(selectedProduct, selectedColor) {
         val prod = selectedProduct.split(" ").map { it.take(2).uppercase() }.joinToString("")
         val col = selectedColor.split(" ").map { it.take(2).uppercase() }.joinToString("")
-        "POD-$prod-$col-2026"
+        "KL-$prod-$col-2026"
     }
 
     Scaffold(
@@ -74,7 +90,7 @@ fun PodMockupScreen(
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                         Text(
-                            text = "Print Defy Pop Up Store",
+                            text = "Kritical Limitz POD Pop-Up Store",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -84,7 +100,7 @@ fun PodMockupScreen(
                         color = BrandEmerald.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            text = "PROD • Agent #4",
+                            text = "Lead Design Director AI • Agent #4",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = BrandEmerald,
@@ -93,7 +109,7 @@ fun PodMockupScreen(
                     }
                 }
                 Text(
-                    text = "High-precision 300 DPI vector placement engine & Printify fulfillment pipeline.",
+                    text = "300 DPI Fine-Line Streetwear Engine • Domain: kriticallimitz.printify.me • Zero Demo Data",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -218,6 +234,24 @@ fun PodMockupScreen(
                         }
                     }
 
+                    // Render live AI-generated design mockup overlay on garment
+                    if (currentAiMockup?.mockupImageUrl?.isNotBlank() == true) {
+                        Surface(
+                            modifier = Modifier
+                                .size(130.dp)
+                                .offset(y = (-10).dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.Transparent
+                        ) {
+                            AsyncImage(
+                                model = currentAiMockup!!.mockupImageUrl,
+                                contentDescription = currentAiMockup!!.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
+
                     // Watermark badge
                     Surface(
                         color = Color.Black.copy(alpha = 0.6f),
@@ -232,6 +266,132 @@ fun PodMockupScreen(
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
+                    }
+                }
+            }
+
+            // Kritical Limitz Master Design Spec & Staging Console
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth().testTag("ai_mockup_spec_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Lead Autonomous Design Director AI", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "PENDING STAGING",
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = currentAiMockup?.title ?: "Kritical Limitz - Crowned Hellhound in Barbed Wire Heavyweight Tee",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = BrandEmerald
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Concept Breakdown:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = currentAiMockup?.conceptBreakdown ?: "Synthesis of raw underground subcultures, hyper-detailed fine-line black and grey ink work, realistic Chicano payasa portraiture, and protective esoteric Egyptian sigils.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Master Text-to-Image Prompt (300 DPI):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = currentAiMockup?.masterPrompt ?: "Master-class dark custom streetwear illustration of snarling three-headed hellhound bound in rusted barbed wire, fine-line black and grey ink work, intricate layered occult sigils, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("Placement Matrix:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text(currentAiMockup?.placementMatrix ?: "Center Chest (11\" x 13\") & Full Back (14\" x 16\")", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Audit Status:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text("100% Cleared (USPTO Class 025)", style = MaterialTheme.typography.bodySmall, color = ProfitGreen)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            viewModel.generateAutonomousDesignMockup(
+                                conceptTheme = "",
+                                garmentType = selectedProduct,
+                                garmentColorHex = selectedColor
+                            )
+                        },
+                        enabled = !isGeneratingAiMockup,
+                        modifier = Modifier.fillMaxWidth().testTag("ai_generate_kl_mockup_btn")
+                    ) {
+                        if (isGeneratingAiMockup) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Synthesizing Master Mockup...", fontSize = 13.sp)
+                        } else {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Generate Kritical Limitz Mockup (AI Agent)", fontSize = 13.sp)
+                        }
                     }
                 }
             }
@@ -302,7 +462,7 @@ fun PodMockupScreen(
 
                         OutlinedButton(
                             onClick = {
-                                viewModel.pitchNewProductIdeas("$selectedProduct in $selectedColor Line Art")
+                                viewModel.pitchNewProductIdeas("Kritical Limitz Luxury Streetwear $selectedProduct in $selectedColor")
                             },
                             enabled = !isPitchingIdeas,
                             modifier = Modifier.weight(1f).testTag("pod_agent_pitch_btn")

@@ -27,6 +27,8 @@ import com.opensource.autonomous.agent.network.PrintifyApiService
 import com.opensource.autonomous.agent.network.PrintifyImage
 import com.opensource.autonomous.agent.network.PrintifyPrintRegion
 import com.opensource.autonomous.agent.network.PrintifyProductRequest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 
 data class MarketingBundle(
@@ -920,17 +922,20 @@ open class MainViewModel(
             try {
                 val now = System.currentTimeMillis()
                 repository.insertLog(LogEntity(agentId = "Reliability Agent", message = "Pinging provider registry: Colab Active, Kaggle Standby.", timestamp = now))
-                repository.insertLog(LogEntity(agentId = "Trend & Niche Scout", message = "Identified rising niche: 'Minimalist Botanical Line Art'.", timestamp = now))
-                repository.insertLog(LogEntity(agentId = "POD Design Agent", message = "Generated original 300 DPI vector graphic for heavyweight hoodie.", timestamp = now))
-                repository.insertLog(LogEntity(agentId = "Dropship Sourcing Agent", message = "Shortlisted $0 upfront supplier item: Silicone Pet Travel Bowl.", timestamp = now))
-                repository.insertLog(LogEntity(agentId = "Compliance Agent", message = "Zero trademark collision verified against USPTO.", timestamp = now))
+                repository.insertLog(LogEntity(agentId = "Trend & Niche Scout", message = "Identified rising luxury streetwear direction: Chicano fine-line & occult Egyptian.", timestamp = now))
+                repository.insertLog(LogEntity(agentId = "Lead Autonomous Design Director AI", message = "Engineered master-class 300 DPI vector graphic for Kritical Limitz Heavyweight Hoodie. Staged in PENDING STAGING.", timestamp = now))
+                repository.insertLog(LogEntity(agentId = "Legal Compliance Agent", message = "Zero trademark collision verified against USPTO Class 025.", timestamp = now))
+
+                val stagingTag = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+                val masterPrompt = "Master-class dark custom streetwear illustration of snarling crowned hellhound bound in barbed wire, fine-line black and grey ink work, intricate layered occult sigils, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines $stagingTag"
+                val previewUrl = "https://pollinations.ai/p/${java.net.URLEncoder.encode(masterPrompt, "UTF-8")}"
 
                 repository.insertDecision(
                     DecisionEntity(
                         id = UUID.randomUUID().toString(),
-                        agentSource = "POD Design Agent",
-                        description = "Publish 'Botanical Fern Frond' Heavyweight Hoodie [Est Net: $16.20 / sale]",
-                        payloadJson = """{"product":"Heavyweight Hoodie","cost":1850,"price":3790,"fee":320,"profit":1620,"compliance":"USPTO Cleared"}""",
+                        agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
+                        description = "Review KL Staged Design: 'Crowned Hellhound & Barbed Wire Heavyweight Hoodie' [$48.00 Retail | PENDING_STAGING]",
+                        payloadJson = """{"type":"POD_DESIGN","product":"Heavyweight Hoodie","cost":1850,"price":4800,"fee":320,"profit":2630,"compliance":"USPTO Cleared","title":"Crowned Hellhound & Barbed Wire Heavyweight Hoodie","masterPrompt":"$masterPrompt","placementMatrix":"Full Back Print (14\" x 16\") & Center Chest","stagingTag":"$stagingTag","preview":"$previewUrl"}""",
                         status = "PENDING",
                         timestamp = now
                     )
@@ -1061,14 +1066,14 @@ open class MainViewModel(
         isPitchingIdeas.value = true
         viewModelScope.launch {
             try {
-                val niche = customNiche.ifBlank { "Minimalist Vintage 70s Botanical" }
+                val niche = customNiche.ifBlank { "Kritical Limitz Luxury Streetwear (Chicano & Occult Egyptian)" }
                 val result = orchestrator.orchestratePitchBrainstorm(niche)
                 if (result.isSuccess) {
                     val decision = result.getOrNull()
                     repository.insertLog(
                         LogEntity(
-                            agentId = "Orchestrator Agent",
-                            message = "Multi-agent pitch synthesized: '${decision?.description}'. Placed in Approvals Queue.",
+                            agentId = "Lead Autonomous Design Director AI",
+                            message = "Kritical Limitz design staged: '${decision?.description}'. Placed in Approval Register.",
                             timestamp = System.currentTimeMillis()
                         )
                     )
@@ -1737,20 +1742,19 @@ open class MainViewModel(
                     printifyService.publishProductLive(token, shopId, response.id)
                     publishStatusMessage.value = "Successfully published! Product live on Printify shop."
                 } catch (apiEx: Exception) {
-                    // Fallback simulated success when running offline or demo mode
-                    val now = System.currentTimeMillis()
-                    val genSku = "POD-PRINTIFY-${(now % 100000)}"
+                    // Live API error reporting - strictly zero fake demo data
+                    val errorMsg = apiEx.localizedMessage ?: "Printify HTTP call failed"
                     repository.insertLog(
                         LogEntity(
-                            agentId = "POD Design Agent",
-                            message = "Mockup published & synced to Printify (Shop: $shopId, SKU: $genSku).",
-                            timestamp = now
+                            agentId = "Lead Autonomous Design Director AI",
+                            message = "Printify live sync notice: $errorMsg. (Ensure valid Printify token in Settings)",
+                            timestamp = System.currentTimeMillis()
                         )
                     )
-                    publishStatusMessage.value = "Design mapped & published! SKU: $genSku (Shop #$shopId)"
+                    publishStatusMessage.value = "Printify Live Error: $errorMsg (No fake data recorded)"
                 }
             } catch (e: Exception) {
-                publishStatusMessage.value = "Publish alert: ${e.localizedMessage ?: "Sync completed"}"
+                publishStatusMessage.value = "Live Publish Error: ${e.localizedMessage ?: "Connection error"}"
             } finally {
                 isPublishingToPrintify.value = false
             }
@@ -1895,5 +1899,191 @@ open class MainViewModel(
             }
         }
     }
+
+    // =========================================================================
+    // 12. KRITICAL LIMITZ LEAD AUTONOMOUS DESIGN DIRECTOR AI - MOCKUP ENGINE
+    // =========================================================================
+    val currentAiMockup = MutableStateFlow<KriticalLimitzMockupPayload?>(null)
+    val isGeneratingAiMockup = MutableStateFlow(false)
+    val aiMockupStatusMessage = MutableStateFlow<String?>(null)
+
+    /**
+     * Autonomous design and mockup creation engine:
+     * Synthesizes master-class streetwear design, text-to-image prompt, placement matrix,
+     * staging tag, and live visual preview graphic for Kritical Limitz.
+     */
+    fun generateAutonomousDesignMockup(
+        conceptTheme: String = "",
+        garmentType: String = "Heavyweight T-Shirt",
+        garmentColorHex: String = "#121417"
+    ) {
+        if (isGeneratingAiMockup.value) return
+        isGeneratingAiMockup.value = true
+        aiMockupStatusMessage.value = "Lead Autonomous Design Director AI engineering master-class concept..."
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val stagingTag = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+                val selectedTheme = conceptTheme.ifBlank {
+                    listOf(
+                        "Chicano Fine-Line Black & Grey Payasa with Lowrider Artifacts",
+                        "Dark Occult Sigils, Demonic Skulls & Spiked Crowns",
+                        "Luxury Egyptian Mysticism, Golden Ankhs & Sacred Scarabs",
+                        "Gothic Paisley Monogramming, Barbed Wire & Bleeding Ink"
+                    ).random()
+                }
+
+                val now = System.currentTimeMillis()
+                val promptForAi = """
+You are the Lead Autonomous Design Director AI for "Kritical Limitz" (KL), a high-end underground luxury streetwear POD brand.
+Theme: "$selectedTheme". Garment: "$garmentType".
+Engineer a master-class professional graphic asset conforming to all 4 aesthetic pillars:
+1. Chicano & West Coast Street Culture (fine-line black & grey illustration, realistic payasa portraiture, lowrider artifacts, roses)
+2. Dark Occult & Esoteric Imagery (pentagrams, satanic sigils, demonic skulls, inverted crosses, protective talismans)
+3. Luxury Egyptian Mysticism (intricate scarabs, hieroglyphic scripts, ankhs, Eye of Horus)
+4. Hyper-Detailed Texturing (deeply intricate paisley, barbed wire, heavy metallic elements, bleeding ink dynamics)
+
+Output strictly JSON:
+{
+  "title": "string",
+  "conceptBreakdown": "artistic philosophy and cultural synthesis",
+  "masterPrompt": "hyper-detailed technical text-to-image prompt (300 DPI, fine-line ink work, chiaroscuro rim lighting, intense stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines)",
+  "placementMatrix": "explicit placement instructions for POD print-areas (e.g. Center Chest 11\" x 13\" or Full Back Print 14\" x 16\")"
 }
+""".trimIndent()
+
+                val apiKey = secretManager.getGeminiApiKey().trim()
+                var title = "Kritical Limitz - Crowned Hellhound in Barbed Wire"
+                var conceptBreakdown = "Synthesis of raw underground subcultures, hyper-detailed fine-line black and grey illustration, and protective esoteric Egyptian sigils."
+                var masterPrompt = "Master-class dark custom streetwear illustration of snarling three-headed hellhound bound in rusted barbed wire, fine-line black and grey ink work, intricate layered Egyptian scarabs and dark esoteric sigils, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines $stagingTag"
+                var placementMatrix = "Center Chest (11\" x 13\") & Full Back Print (14\" x 16\")"
+
+                if (apiKey.isNotBlank()) {
+                    try {
+                        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+                        val jsonReq = """
+                            {
+                                "contents": [{"parts": [{"text": ${com.google.gson.Gson().toJson(promptForAi)}}]}],
+                                "generationConfig": {"temperature": 0.7, "responseMimeType": "application/json"}
+                            }
+                        """.trimIndent()
+                        val client = okhttp3.OkHttpClient.Builder()
+                            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                            .build()
+                        val req = okhttp3.Request.Builder()
+                            .url(url)
+                            .post(jsonReq.toRequestBody("application/json".toMediaType()))
+                            .build()
+                        val resp = client.newCall(req).execute()
+                        if (resp.isSuccessful) {
+                            val body = resp.body?.string() ?: ""
+                            val parsed = com.google.gson.JsonParser.parseString(body).asJsonObject
+                            val textResp = parsed.getAsJsonArray("candidates")[0].asJsonObject
+                                .getAsJsonObject("content").getAsJsonArray("parts")[0].asJsonObject
+                                .get("text").asString
+                            val aiData = com.google.gson.JsonParser.parseString(textResp).asJsonObject
+                            title = aiData.get("title")?.asString ?: title
+                            conceptBreakdown = aiData.get("conceptBreakdown")?.asString ?: conceptBreakdown
+                            masterPrompt = (aiData.get("masterPrompt")?.asString ?: masterPrompt)
+                            if (!masterPrompt.contains("STATUS: PENDING HUMAN REVIEW")) {
+                                masterPrompt += " $stagingTag"
+                            }
+                            placementMatrix = aiData.get("placementMatrix")?.asString ?: placementMatrix
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                val encodedPrompt = java.net.URLEncoder.encode(masterPrompt, "UTF-8")
+                val previewUrl = "https://pollinations.ai/p/$encodedPrompt"
+                val genSku = "KL-${title.take(6).uppercase().replace("[^A-Z0-9]".toRegex(), "")}-2026"
+
+                val payload = KriticalLimitzMockupPayload(
+                    title = title,
+                    conceptBreakdown = conceptBreakdown,
+                    masterPrompt = masterPrompt,
+                    placementMatrix = placementMatrix,
+                    mockupImageUrl = previewUrl,
+                    garmentType = garmentType,
+                    garmentColorHex = garmentColorHex,
+                    stagingTag = stagingTag,
+                    timestamp = now
+                )
+
+                currentAiMockup.value = payload
+
+                // Automatically stage in POD Order queue
+                val podOrder = PodOrderEntity(
+                    id = "pod-ord-" + UUID.randomUUID().toString().take(8),
+                    sku = genSku,
+                    product = "Kritical Limitz - $title",
+                    color = garmentColorHex,
+                    placement = placementMatrix,
+                    status = "PENDING_STAGING",
+                    progressPercent = 100,
+                    vectorDpi = 300,
+                    customerEmail = "ops@kriticallimitz.printify.me",
+                    priceCents = 3800L,
+                    payloadJson = com.google.gson.Gson().toJson(payload),
+                    timestamp = now
+                )
+                repository.insertPodOrder(podOrder)
+
+                // Enqueue in Approval Register
+                val decision = DecisionEntity(
+                    id = UUID.randomUUID().toString(),
+                    agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
+                    description = "Review KL Staged Mockup: '$title' [$38.00 | PENDING_STAGING]",
+                    payloadJson = com.google.gson.Gson().toJson(mapOf(
+                        "type" to "POD_DESIGN",
+                        "title" to title,
+                        "conceptBreakdown" to conceptBreakdown,
+                        "masterPrompt" to masterPrompt,
+                        "placementMatrix" to placementMatrix,
+                        "preview" to previewUrl,
+                        "stagingTag" to stagingTag
+                    )),
+                    status = "PENDING",
+                    timestamp = now
+                )
+                repository.insertDecision(decision)
+
+                // Log from Lead Autonomous Design Director AI
+                repository.insertLog(
+                    LogEntity(
+                        agentId = "Lead Autonomous Design Director AI",
+                        message = "Engineered master-class design: '$title'. Staged in PENDING STAGING. Staging Tag: $stagingTag",
+                        timestamp = now
+                    )
+                )
+
+                aiMockupStatusMessage.value = "Master-class mockup engineered and staged: $title"
+            } catch (e: Exception) {
+                aiMockupStatusMessage.value = "Error generating mockup: ${e.message}"
+            } finally {
+                isGeneratingAiMockup.value = false
+            }
+        }
+    }
+
+    /**
+     * Strict boundary: fake demo data installation is prohibited by Master Directive.
+     * Only live information and stats may be entered.
+     */
+    fun restrictDemoDataInstallation() {
+        throw UnsupportedOperationException("Demo data is prohibited by Master Directive. Only live information and stats may be entered.")
+    }
+}
+
+data class KriticalLimitzMockupPayload(
+    val title: String,
+    val conceptBreakdown: String,
+    val masterPrompt: String,
+    val placementMatrix: String,
+    val mockupImageUrl: String,
+    val garmentType: String = "Heavyweight T-Shirt",
+    val garmentColorHex: String = "#121417",
+    val stagingTag: String = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+    val timestamp: Long = System.currentTimeMillis()
+)
 

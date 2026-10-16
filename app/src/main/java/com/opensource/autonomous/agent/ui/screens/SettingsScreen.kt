@@ -116,10 +116,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
         mutableStateOf(currentSettings?.forbiddenItems ?: "Trademarked logos, Disney/Marvel characters, celebrity names, copyrighted song lyrics, brand slogans")
     }
     var allowedStyles by remember(currentSettings) {
-        mutableStateOf(currentSettings?.allowedStyles ?: "Minimalist line art, Vintage botanical, Retro typographic 70s, Cyber-grid geometric, Cottagecore watercolor")
+        mutableStateOf(currentSettings?.allowedStyles ?: "Chicano fine-line black and grey, Dark occult sigils and demonic skulls, Luxury Egyptian mysticism and hieroglyphics, Gothic paisley patterns and barbed wire texturing")
     }
     var preferredPalettes by remember(currentSettings) {
-        mutableStateOf(currentSettings?.preferredPalettes ?: "Earthy terracotta, Charcoal slate, Pastel sage, Amber gold, Monochrome ink")
+        mutableStateOf(currentSettings?.preferredPalettes ?: "Obsidian black, Bleeding crimson, Platinum chrome, Metallic gold, Fine-line charcoal grey")
     }
 
     // 6. SecretManager & Credentials State

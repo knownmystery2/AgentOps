@@ -245,37 +245,8 @@ fun PodStudioDesktopWorkspace(
                     )
                 )
 
-                // 3. Double-entry whole-cents Room ledger entry
-                db.ledgerDao().insertEntry(
-                    LedgerEntity(
-                        timestamp = now,
-                        code = "LEDG-POD-" + UUID.randomUUID().toString().take(6).uppercase(),
-                        store = "Kritical Limitz POD Pop-Up Store (kriticallimitz.printify.me)",
-                        platform = "Printify Direct API",
-                        description = "Staged POD product: ${selectedProduct.name} ($computedSku)",
-                        accountDebit = "1020 Printify Settlement",
-                        accountCredit = "4020 Merchandise Revenue",
-                        amountCents = selectedProduct.retailPriceCents,
-                        hashToken = "0x" + UUID.randomUUID().toString().take(12),
-                        category = "SALE"
-                    )
-                )
-
-                // COGS debit to balance ledger
-                db.ledgerDao().insertEntry(
-                    LedgerEntity(
-                        timestamp = now,
-                        code = "LEDG-COGS-" + UUID.randomUUID().toString().take(6).uppercase(),
-                        store = "Kritical Limitz POD Pop-Up Store (kriticallimitz.printify.me)",
-                        platform = "Monster Digital Fulfillment",
-                        description = "Direct print & blank fulfillment cost: ${selectedProduct.name}",
-                        accountDebit = "5010 Cost of Goods Sold",
-                        accountCredit = "2010 Accounts Payable Monster Digital",
-                        amountCents = selectedProduct.cogsCents,
-                        hashToken = "0x" + UUID.randomUUID().toString().take(12),
-                        category = "COGS"
-                    )
-                )
+                // Staged design is held in PENDING STAGING awaiting human review.
+                // Financial ledger remains 100% strictly for verified live customer sales only.
 
                 db.logDao().insertLog(
                     LogEntity(
@@ -308,7 +279,7 @@ fun PodStudioDesktopWorkspace(
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     isPublishing = false
-                    publishSuccessBanner = "Published live! SKU: $computedSku (ID: $orderId)"
+                    publishSuccessBanner = "Staging failed: ${e.message ?: "Unknown error"}"
                 }
             }
         }

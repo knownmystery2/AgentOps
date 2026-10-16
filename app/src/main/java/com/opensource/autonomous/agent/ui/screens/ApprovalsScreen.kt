@@ -40,6 +40,8 @@ import com.opensource.autonomous.agent.ui.ApprovalRegisterStats
 import com.opensource.autonomous.agent.ui.ApprovalRegisterViewModel
 import com.opensource.autonomous.agent.ui.MainViewModel
 import com.opensource.autonomous.agent.ui.PendingBusinessActionProposal
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -742,10 +744,43 @@ fun ApprovalRegisterProposalCard(
     }
 
     val isPodAction = decision.agentSource.contains("Creative", ignoreCase = true) ||
+            decision.agentSource.contains("Design Director", ignoreCase = true) ||
+            decision.agentSource.contains("Kritical", ignoreCase = true) ||
             decision.description.contains("POD", ignoreCase = true) ||
             decision.description.contains("Mockup", ignoreCase = true) ||
             decision.description.contains("Tee", ignoreCase = true) ||
             decision.description.contains("Hoodie", ignoreCase = true)
+
+    val previewUrl = remember(decision.payloadJson) {
+        try {
+            val root = com.google.gson.JsonParser.parseString(decision.payloadJson).asJsonObject
+            root.get("preview")?.asString ?: root.get("mockupImageUrl")?.asString
+        } catch (_: Exception) { null }
+    }
+    val conceptBreakdown = remember(decision.payloadJson) {
+        try {
+            val root = com.google.gson.JsonParser.parseString(decision.payloadJson).asJsonObject
+            root.get("conceptBreakdown")?.asString
+        } catch (_: Exception) { null }
+    }
+    val masterPrompt = remember(decision.payloadJson) {
+        try {
+            val root = com.google.gson.JsonParser.parseString(decision.payloadJson).asJsonObject
+            root.get("masterPrompt")?.asString
+        } catch (_: Exception) { null }
+    }
+    val placementMatrix = remember(decision.payloadJson) {
+        try {
+            val root = com.google.gson.JsonParser.parseString(decision.payloadJson).asJsonObject
+            root.get("placementMatrix")?.asString
+        } catch (_: Exception) { null }
+    }
+    val stagingTag = remember(decision.payloadJson) {
+        try {
+            val root = com.google.gson.JsonParser.parseString(decision.payloadJson).asJsonObject
+            root.get("stagingTag")?.asString ?: "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+        } catch (_: Exception) { "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]" }
+    }
 
     Card(
         modifier = Modifier
@@ -859,6 +894,102 @@ fun ApprovalRegisterProposalCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+
+            // If this is a Kritical Limitz POD Design, render live visual mockup & structured spec
+            if (!previewUrl.isNullOrBlank() || !conceptBreakdown.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, BrandEmerald.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth().testTag("approval_mockup_preview_${decision.id}")
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Lead Design Director Staged Mockup", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BrandEmerald)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "PENDING STAGING",
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        if (!previewUrl.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color.Black,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                            ) {
+                                AsyncImage(
+                                    model = previewUrl,
+                                    contentDescription = decision.description,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+
+                        if (!conceptBreakdown.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Concept Breakdown:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(conceptBreakdown, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        if (!masterPrompt.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("Master Prompt (300 DPI):", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(masterPrompt, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.padding(8.dp))
+                            }
+                        }
+
+                        if (!placementMatrix.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Placement Matrix:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text(placementMatrix, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stagingTag,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 

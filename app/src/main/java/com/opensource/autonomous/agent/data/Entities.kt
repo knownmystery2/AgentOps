@@ -132,9 +132,9 @@ data class SettingsEntity(
     val strictCopyrightCheck: Boolean = true,
     val trademarkConfidenceMin: Int = 98,
     val autoClearanceCertificate: Boolean = true,
-    val allowedStyles: String = "Minimalist line art, Vintage botanical, Retro typographic 70s, Cyber-grid geometric, Cottagecore watercolor",
+    val allowedStyles: String = "Chicano fine-line black and grey, Dark occult sigils and demonic skulls, Luxury Egyptian mysticism and hieroglyphics, Gothic paisley patterns and barbed wire texturing",
     val forbiddenItems: String = "Trademarked logos, Disney/Marvel characters, celebrity names, copyrighted song lyrics, brand slogans",
-    val preferredPalettes: String = "Earthy terracotta, Charcoal slate, Pastel sage, Amber gold, Monochrome ink",
+    val preferredPalettes: String = "Obsidian black, Bleeding crimson, Platinum chrome, Metallic gold, Fine-line charcoal grey",
 
     // 7. SecretManager & Credentials (Masked)
     val backendServerEndpoint: String = "http://10.0.2.2:8080",

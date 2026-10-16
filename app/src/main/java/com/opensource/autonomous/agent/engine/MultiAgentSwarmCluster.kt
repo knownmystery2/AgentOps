@@ -35,9 +35,13 @@ data class PolishedProductDesign(
     val description: String,
     val keywords: List<String>,
     val visualArtPrompt: String,
-    val suggestedPriceCents: Long = 1900L,
-    val category: String = "DIGITAL_ASSET",
-    val fileFormat: String = "Vector SVG + Markdown Blueprint",
+    val conceptBreakdown: String = "",
+    val masterPrompt: String = "",
+    val placementMatrix: String = "Center Chest (11\" x 13\")",
+    val stagingTag: String = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+    val suggestedPriceCents: Long = 2900L,
+    val category: String = "DIGITAL_PRODUCT",
+    val fileFormat: String = "Vector SVG + 300 DPI CMYK Master Spec",
     var status: String = "AWAITING_HUMAN_APPROVAL",
     var imagePreviewUrl: String = "",
     var clearanceHash: String = ""
@@ -271,12 +275,49 @@ class MultiAgentSwarmCluster(
                     repository.insertDigitalProduct(digitalProduct)
                     createdProducts.add(digitalProduct)
 
+                    // Staging POD Mockup Order in PENDING_STAGING
+                    val genSku = "KL-${polishedDesign.title.take(6).uppercase().replace("[^A-Z0-9]".toRegex(), "")}-2026"
+                    val podMockupOrder = PodOrderEntity(
+                        id = "pod-ord-" + UUID.randomUUID().toString().take(8),
+                        sku = genSku,
+                        product = "Kritical Limitz - ${polishedDesign.title}",
+                        color = "Obsidian Black",
+                        placement = polishedDesign.placementMatrix,
+                        status = "PENDING_STAGING",
+                        progressPercent = 100,
+                        vectorDpi = 300,
+                        customerEmail = "ops@kriticallimitz.printify.me",
+                        priceCents = polishedDesign.suggestedPriceCents,
+                        payloadJson = gson.toJson(mapOf(
+                            "title" to polishedDesign.title,
+                            "conceptBreakdown" to polishedDesign.conceptBreakdown,
+                            "masterPrompt" to polishedDesign.masterPrompt,
+                            "placementMatrix" to polishedDesign.placementMatrix,
+                            "stagingTag" to polishedDesign.stagingTag,
+                            "preview" to imagePreviewUrl
+                        )),
+                        timestamp = System.currentTimeMillis()
+                    )
+                    db.podOrderDao().insertOrder(podMockupOrder)
+
                     // Gatekeeper: Enqueue in Human Approvals Queue
                     val decision = DecisionEntity(
                         id = UUID.randomUUID().toString(),
-                        agentSource = "Swarm Cluster (Trend + Design + Legal)",
-                        description = "Approve Swarm Product: '${polishedDesign.title}' [$${"%.2f".format(polishedDesign.suggestedPriceCents / 100.0)} Retail | 100% Margin | Cleared: ${legalStatus.clearanceHash}]",
-                        payloadJson = """{"type":"DIGITAL_PRODUCT","productId":"$productId","title":"${polishedDesign.title}","theme":"${storeIdentity.storeTheme}","price":${polishedDesign.suggestedPriceCents},"preview":"$imagePreviewUrl","cert":"${legalStatus.clearanceHash}"}""",
+                        agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
+                        description = "Review KL Staged Design: '${polishedDesign.title}' [$${"%.2f".format(polishedDesign.suggestedPriceCents / 100.0)} | PENDING_STAGING]",
+                        payloadJson = gson.toJson(mapOf(
+                            "type" to "POD_DESIGN",
+                            "productId" to productId,
+                            "title" to polishedDesign.title,
+                            "conceptBreakdown" to polishedDesign.conceptBreakdown,
+                            "masterPrompt" to polishedDesign.masterPrompt,
+                            "placementMatrix" to polishedDesign.placementMatrix,
+                            "stagingTag" to polishedDesign.stagingTag,
+                            "theme" to storeIdentity.storeTheme,
+                            "price" to polishedDesign.suggestedPriceCents,
+                            "preview" to imagePreviewUrl,
+                            "cert" to legalStatus.clearanceHash
+                        )),
                         status = "PENDING",
                         timestamp = System.currentTimeMillis()
                     )
@@ -418,9 +459,17 @@ class MultiAgentSwarmCluster(
      */
     private suspend fun triggerTrendAgent(customNiche: String?): StoreIdentityResult = withContext(Dispatchers.IO) {
         val prompt = if (customNiche.isNullOrBlank()) {
-            """Act as the Trend & Identity Agent. Brainstorm a completely unique, highly specific e-commerce pop-up store theme (e.g. 'Gothic Botanical Gardening Gear' or 'Retro-Futurist Coffee Lovers'). Based on that theme, create a list of 5 one-of-a-kind product concepts. Output your answer strictly as a JSON object matching this structure: { "storeTheme": "string", "concepts": [ { "title": "string", "rawIdea": "string" } ] }"""
+            """Act as the Trend & Identity Agent for "Kritical Limitz" (KL), a high-end underground luxury streetwear POD brand.
+Synthesize the brand's aesthetic DNA:
+1. Chicano & West Coast Street Culture (fine-line black & grey illustration, realistic payasa portraiture, lowrider artifacts, urban textures)
+2. Dark Occult & Esoteric Imagery (pentagrams, satanic sigils, demonic skulls, inverted crosses, protective talismans)
+3. Luxury Egyptian Mysticism (intricate scarabs, hieroglyphic scripts, ankhs, Eye of Horus)
+4. Hyper-Detailed Texturing (deeply intricate paisley, barbed wire, heavy metallic elements, bleeding ink dynamics)
+
+Brainstorm a master-class luxury streetwear capsule theme and 5 one-of-a-kind merchandise concepts. Output strictly as JSON: { "storeTheme": "string", "concepts": [ { "title": "string", "rawIdea": "string" } ] }"""
         } else {
-            """Act as the Trend & Identity Agent. Focus on the niche '$customNiche'. Brainstorm a completely unique, highly specific e-commerce pop-up store theme. Based on that theme, create a list of 5 one-of-a-kind product concepts. Output your answer strictly as a JSON object matching this structure: { "storeTheme": "string", "concepts": [ { "title": "string", "rawIdea": "string" } ] }"""
+            """Act as the Trend & Identity Agent for "Kritical Limitz" (KL). Infuse the niche '$customNiche' with Kritical Limitz underground luxury streetwear aesthetic DNA (Chicano fine-line, dark occult sigils, luxury Egyptian mysticism, and hyper-detailed paisley texturing).
+Brainstorm a master-class luxury streetwear capsule theme and 5 one-of-a-kind merchandise concepts. Output strictly as JSON: { "storeTheme": "string", "concepts": [ { "title": "string", "rawIdea": "string" } ] }"""
         }
 
         val geminiResponse = callGeminiApi(prompt)
@@ -431,36 +480,36 @@ class MultiAgentSwarmCluster(
             }
         }
 
-        // High-Quality Dynamic Fallback (Model Rotation / Offline Engine)
+        // Master-Class Kritical Limitz Luxury Streetwear Dynamic Fallbacks
         val fallbackThemes = listOf(
             StoreIdentityResult(
-                storeTheme = "Retro-Futurist Coffee Lovers & Cyber-Espresso Lab",
+                storeTheme = "Chicano Fine-Line & Lowrider Mysticism (KL Capsule 01)",
                 concepts = listOf(
-                    RawProductConcept("Quantum Pour-Over Vector Schematics", "300 DPI isometric technical blueprint for hyperbaric espresso extraction with vector linework"),
-                    RawProductConcept("Neon Cyber-Roast Barista Desk Mat Spec", "Cyberpunk coffee tasting notes wheel and circuit-etched macro desk pad vector file"),
-                    RawProductConcept("Caffeine Algorithm Prompt Handbook", "50+ prompt engineering workflow timers and focus sprint scripts for developers"),
-                    RawProductConcept("Zero-Latency Cold Brew Notion Operating System", "Micro-roastery batch tracking dashboard with inventory and margin calculators"),
-                    RawProductConcept("Dark Matter Espresso Typographic Poster Pack", "Clean Bauhaus retro typography celebrating single-origin bean chemistry")
+                    RawProductConcept("Payasa Queen Fine-Line Master Chest Graphic", "Hyper-detailed West Coast clown portrait with tear drops, roses, and lowrider chrome artifacts"),
+                    RawProductConcept("Sacred Bleeding Heart & Barbed Wire Heavyweight Hoodie", "Intricate sacred heart bound in razor wire with deep ink cross-hatching and stippled shadows"),
+                    RawProductConcept("Gothic KL Monogram Lowrider All-Over Bomber", "All-over West Coast custom gothic lettering repeat pattern with metallic silver accents"),
+                    RawProductConcept("West Coast Velvet Roses & Fine-Line Skull Pocket Graphic", "Fine-line stippled human skull framed by blooming black velvet roses and razor thorns"),
+                    RawProductConcept("Lowrider Chrome Artifacts & Spiderweb Oversized Tee", "Full back print featuring etched wire-wheel spokes, hydra sigils, and fine grey shading")
                 )
             ),
             StoreIdentityResult(
-                storeTheme = "Gothic Botanical Herbarium & Dark Academia Flora",
+                storeTheme = "Dark Occult Sigils & Demonic Skulls (KL Capsule 02)",
                 concepts = listOf(
-                    RawProductConcept("Nightshade & Fern Victorian Apothecary Guide", "Illustrated handbook of nocturnal botany with high-resolution etching engravings"),
-                    RawProductConcept("Alchemical Herbarium Vector Icon Set", "90 precision SVG symbols for antique herbalists, alchemists, and dark academia stationery"),
-                    RawProductConcept("Moonlight Seed Vault Notion Organizer", "Perennial gardening calendar, soil chemistry tracker, and heirloom seed ledger"),
-                    RawProductConcept("Vintage Poison Garden Typographic Wall Art", "Detailed 300 DPI botanical copperplate prints formatted for large-format fine art prints"),
-                    RawProductConcept("Solitary Naturalist Field Journal Kit", "Printable daily observational logs and taxonomic classification cheat sheets")
+                    RawProductConcept("Crowned Hellhound Bound in Barbed Wire Master Spec", "Snarling three-headed hellhound bound in rusted barbed wire over inverted star sigil"),
+                    RawProductConcept("Luciferian Pentagram & Razor Crown Heavyweight Tee", "Hyper-detailed demonic skull crowned in razor blades with visceral ink bleed dynamics"),
+                    RawProductConcept("Protective Talisman Gothic Monogram Hoodie", "Dense layered esoteric occult geometry embedded behind bold gothic KL embroidery anchors"),
+                    RawProductConcept("Inverted Crucifix & Coiled Viper Left Sleeve Wrap", "Continuous fine-line coiled viper wrapped in thorns down entire left sleeve"),
+                    RawProductConcept("Baphomet Dark Surrealism All-Over Hood Spec", "High contrast stippled occult deity surrounded by bleeding dark surrealism ink wash")
                 )
             ),
             StoreIdentityResult(
-                storeTheme = "Cyber-Minimalist Solopreneur OS & Micro-SaaS Blueprints",
+                storeTheme = "Luxury Egyptian Mysticism & Sacred Scarabs (KL Capsule 03)",
                 concepts = listOf(
-                    RawProductConcept("Zero-Capital Solopreneur Operating System", "Complete Notion workspace with automated client pipelines, revenue ledger, and focus boards"),
-                    RawProductConcept("High-Converting AI SaaS Prompt Blueprint", "100+ precision system instructions for building autonomous business workflows"),
-                    RawProductConcept("Isometric Clean Tech Vector Component Kit", "120 scalable SVG interface icons and system architecture diagrams"),
-                    RawProductConcept("Micro-SaaS Stripe Checkout Starter Kit", "Production-ready Jamstack code repository with instant Stripe webhooks"),
-                    RawProductConcept("Organic Traffic Growth Playbook 2026", "Actionable zero-cost guide for organic Pinterest and short-form discovery funnels")
+                    RawProductConcept("Golden Ankh & Winged Scarab Master Chest Print", "Intricate sacred scarab holding solar disc with fine-line hieroglyphic script"),
+                    RawProductConcept("Eye of Horus Esoteric Paisley Heavyweight Hoodie", "All-seeing protective talisman embedded inside seamless luxury bandana paisley repeat"),
+                    RawProductConcept("Pharaoh Sarcophagus Gold Foil Streetwear Oversized Tee", "Hyper-detailed obsidian black and antique gold metallic line-art sarcophagus portrait"),
+                    RawProductConcept("Hieroglyphic Scripture & Razor Barbed Wire Sleeves", "Continuous sacred Egyptian hieroglyphs intertwined with razor barbed wire"),
+                    RawProductConcept("Anubis Guardian of the Underworld Full Back Spec", "Dramatic chiaroscuro lighting on jackal deity wielding golden scales and dark occult sigils")
                 )
             )
         )
@@ -471,26 +520,41 @@ class MultiAgentSwarmCluster(
     /**
      * Lead Autonomous Design Director AI for "Kritical Limitz" (KL):
      * Transforms raw concepts into master-class luxury streetwear graphic prompts,
-     * SEO tags, placement matrix, and staging tags.
+     * concept breakdowns, master prompts, placement matrices, and staging tags.
      */
     private suspend fun triggerCreativeDesignAgent(concept: RawProductConcept, theme: String): PolishedProductDesign = withContext(Dispatchers.IO) {
         val prompt = """
-Act as the Lead Autonomous Design Director AI for "Kritical Limitz" (KL), a high-end underground luxury streetwear POD brand.
-Fit this product into the luxury streetwear theme: "$theme". Polish this concept: "${concept.rawIdea}" with title "${concept.title}".
-AESTHETIC PILLARS:
-1. Chicano & West Coast Street Culture: Hyper-detailed fine-line black and grey illustration, custom lettering, realistic portraiture, lowrider artifacts, urban textures.
-2. Dark Occult & Esoteric: Satanic sigils, demonic skulls, inverted crosses, protective talismans, dark surrealism.
-3. Luxury Egyptian Mysticism: Intricate scarabs, Hieroglyphic scripts, Ankhs, Eye of Horus.
-4. Hyper-Detailed Texturing: Deeply intricate paisley, barbed wire, heavy metallic elements, bleeding ink dynamics.
+You are the Lead Autonomous Design Director AI for "Kritical Limitz" (KL), a high-end, underground luxury streetwear print-on-demand (POD) brand. Your objective is to engineer master-class, professional-grade graphic assets and text-to-image generation prompts that surpass standard retail designs. You operate with maximum creative autonomy but are strictly bound by a multi-layered verification protocol.
 
-Provide:
-1. An enticing luxury streetwear product description.
-2. A comma-separated list of SEO keywords.
-3. Master text-to-image prompt (300 DPI vector, high contrast, fine cross-hatching, dramatic chiaroscuro lighting, no blurry lines, no low-res).
-4. Placement Matrix instructions.
-5. Mandatory tag at the end: [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]
+### 1. BRAND CORE & AESTHETIC DNA
+Synthesize these thematic pillars:
+- Chicano & West Coast Street Culture: Hyper-detailed fine-line black and grey illustration, custom lettering, realistic portraiture mixed with clown/payasa makeup, lowrider artifacts, roses, urban textures.
+- Dark Occult & Esoteric Imagery: Pentagrams, satanic sigils, demonic skulls, inverted crosses, protective talismans, dark surrealism.
+- Luxury Egyptian Mysticism: Intricate scarabs, Hieroglyphic scripts, Ankhs, Eye of Horus integrated into modern streetwear.
+- Hyper-Detailed Texturing: Deeply intricate paisley patterns, barbed wire, heavy metallic elements (brass knuckles, spiked crowns, razor blades), visceral splatter/bleeding ink dynamics.
 
-Output strictly as JSON: { "title": "string", "description": "string", "keywords": ["string"], "visualArtPrompt": "string" }
+### 2. DESIGN COMPOSITION & TECHNIQUE CRITERIA
+- Intricate Layering: Embed background motifs (seamless occult or Egyptian paisley) behind hard-edged foreground focal points (heavily crowned, snarling hellhound bound in barbed wire).
+- High Contrast & Depth: Dramatic lighting, intense stippling, fine cross-hatching, deep ink-bleeding shadows for 3D realism on flat garments.
+- Seamless Pattern Integration: Wrap detailed dense repeat-patterns across seams, sleeves, hoods with KL gothic monogram anchors.
+
+### 3. MANDATORY OPERATIONAL CONSTRAINTS (HARD BOUNDARIES)
+- NO UNAUTHORIZED STOREFRONT PUBLISHING: Every single design held in PENDING STAGING state awaiting manual human administrator verification.
+- NO UNAUTHORIZED STORE CREATION: Operates strictly within the singular assigned domain of Kritical Limitz (kriticallimitz.printify.me).
+
+Fit this concept into theme "$theme": "${concept.rawIdea}" with title "${concept.title}".
+
+### 4. OUTPUT FORMATTING
+Output strictly valid JSON with these exact fields:
+{
+  "title": "string",
+  "conceptBreakdown": "The artistic philosophy behind the piece",
+  "masterPrompt": "Hyper-detailed technical text-to-image prompt (dark custom streetwear illustration, fine-line ink work, chiaroscuro lighting, stippling, no low-resolution, no amateur vectors, no blurry lines)",
+  "placementMatrix": "Explicit placement instructions for POD print-areas (e.g. Full Back Print, Center Chest 11\" x 13\", Left Sleeve Wrap, All-Over Hood Print)",
+  "description": "Enticing luxury streetwear product copy",
+  "keywords": ["kritical-limitz", "luxury-streetwear", "300-dpi-vector", "pending-staging"],
+  "stagingTag": "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+}
 """.trimIndent()
 
         val geminiResponse = callGeminiApi(prompt)
@@ -498,19 +562,31 @@ Output strictly as JSON: { "title": "string", "description": "string", "keywords
             val jsonObject = parseJsonObject(geminiResponse)
             if (jsonObject != null && jsonObject.has("title")) {
                 val title = jsonObject.get("title").asString
+                val conceptBreakdown = jsonObject.get("conceptBreakdown")?.asString
+                    ?: "Master-class luxury streetwear synthesis of underground subcultures and esoteric symbology."
+                var masterPrompt = jsonObject.get("masterPrompt")?.asString
+                    ?: "Master-class dark custom streetwear illustration, fine-line black and grey ink work, intricate layered motifs, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines"
+                val placementMatrix = jsonObject.get("placementMatrix")?.asString
+                    ?: "Center Chest (11\" x 13\") & Full Back Print (14\" x 16\")"
                 val description = jsonObject.get("description")?.asString ?: ""
-                val keywords = jsonObject.getAsJsonArray("keywords")?.map { it.asString } ?: listOf("kritical-limitz", "luxury-streetwear", "300-dpi-vector")
-                var visualArtPrompt = jsonObject.get("visualArtPrompt")?.asString ?: "master-class luxury underground streetwear"
-                if (!visualArtPrompt.contains("STATUS: PENDING HUMAN REVIEW")) {
-                    visualArtPrompt += " [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+                val keywords = jsonObject.getAsJsonArray("keywords")?.map { it.asString }
+                    ?: listOf("kritical-limitz", "luxury-streetwear", "300-dpi-vector", "pending-staging")
+                val stagingTag = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+
+                if (!masterPrompt.contains("STATUS: PENDING HUMAN REVIEW")) {
+                    masterPrompt += " $stagingTag"
                 }
 
                 return@withContext PolishedProductDesign(
                     title = title,
                     description = description,
                     keywords = keywords,
-                    visualArtPrompt = visualArtPrompt,
-                    suggestedPriceCents = 2900L,
+                    visualArtPrompt = masterPrompt,
+                    conceptBreakdown = conceptBreakdown,
+                    masterPrompt = masterPrompt,
+                    placementMatrix = placementMatrix,
+                    stagingTag = stagingTag,
+                    suggestedPriceCents = 3800L,
                     category = "DIGITAL_PRODUCT",
                     fileFormat = "Vector SVG + 300 DPI CMYK Master Spec"
                 )
@@ -518,9 +594,12 @@ Output strictly as JSON: { "title": "string", "description": "string", "keywords
         }
 
         // Clean local deterministic fallback adhering strictly to Kritical Limitz aesthetic
+        val stagingTag = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+        val fallbackMasterPrompt = "Master-class dark custom streetwear illustration of ${concept.rawIdea}, hyper-detailed fine-line black and grey ink work, intricate layered Egyptian scarab, esoteric demonic sigils, and seamless paisley pattern background, dramatic chiaroscuro rim lighting, intense stippling, deep ink-bleeding shadows, centered on obsidian garment, 300 DPI, no low-resolution, no amateur vectors, no blurry lines $stagingTag"
+
         PolishedProductDesign(
             title = concept.title,
-            description = "Bespoke underground luxury streetwear artifact from Kritical Limitz ($theme capsule). Hyper-detailed fine-line black and grey illustration, intricate Egyptian scarab motifs, dark esoteric sigils, and seamless paisley layering. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+            description = "Bespoke underground luxury streetwear artifact from Kritical Limitz ($theme capsule). Hyper-detailed fine-line black and grey illustration, intricate Egyptian scarab motifs, dark esoteric sigils, and seamless paisley layering. $stagingTag",
             keywords = listOf(
                 "kritical-limitz",
                 "underground-luxury-streetwear",
@@ -530,8 +609,12 @@ Output strictly as JSON: { "title": "string", "description": "string", "keywords
                 "300-dpi-vector",
                 "pending-staging"
             ),
-            visualArtPrompt = "Master-class dark custom streetwear illustration of ${concept.rawIdea}, fine-line black and grey ink work, intricate layered Egyptian scarab and dark esoteric sigils, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
-            suggestedPriceCents = 2900L,
+            visualArtPrompt = fallbackMasterPrompt,
+            conceptBreakdown = "Synthesis of raw underground subcultures, hyper-detailed fine-line black and grey ink work, and protective esoteric Egyptian sigils engineered for high-end luxury streetwear.",
+            masterPrompt = fallbackMasterPrompt,
+            placementMatrix = "Center Chest (11\" x 13\") & Full Back Print (14\" x 16\")",
+            stagingTag = stagingTag,
+            suggestedPriceCents = 3800L,
             category = "DIGITAL_PRODUCT",
             fileFormat = "Vector SVG + 300 DPI CMYK Master Spec"
         )

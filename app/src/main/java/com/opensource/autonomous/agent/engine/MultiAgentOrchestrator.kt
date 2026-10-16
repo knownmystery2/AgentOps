@@ -105,7 +105,7 @@ class MultiAgentOrchestrator(
      * Compliance Agent (10) conducts trademark search.
      * Orchestrator (1) places verified pitch into human approval queue.
      */
-    suspend fun orchestratePitchBrainstorm(targetNiche: String = "Minimalist Cyber Geometric"): Result<DecisionEntity> = withContext(Dispatchers.IO) {
+    suspend fun orchestratePitchBrainstorm(targetNiche: String = "Kritical Limitz Luxury Streetwear (Chicano & Occult Egyptian)"): Result<DecisionEntity> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
 
         // 1. Trend Scout pitches idea
@@ -114,29 +114,34 @@ class MultiAgentOrchestrator(
             senderAgentName = "Trend & Niche Scout",
             recipientAgentId = "4",
             messageType = "PITCH",
-            subject = "New Storefront Opportunity: $targetNiche",
-            body = "Identified untapped customer demand with 0 paid ad spend required. Proposing 3 high-margin items at $0 upfront cost.",
-            payloadJson = """{"niche":"$targetNiche","estGrossMargin":52}""",
+            subject = "New KL Merchandise Concept: $targetNiche",
+            body = "Formulated master-class luxury streetwear direction. Requesting Lead Autonomous Design Director AI to synthesize concept breakdown, master prompt, and placement matrix.",
+            payloadJson = """{"niche":"$targetNiche","estGrossMargin":65}""",
             timestamp = now
         )
         repository.insertAgentMessage(pitchMessage)
 
-        // 2. POD Design Agent designs product
-        val designTitle = "$targetNiche Isometric Line Art Tee"
+        // 2. Lead Autonomous Design Director AI designs product
+        val designTitle = "Kritical Limitz - Crowned Hellhound in Barbed Wire Heavyweight Tee"
+        val stagingTag = "[STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
+        val masterPrompt = "Master-class dark custom streetwear illustration of snarling three-headed hellhound bound in barbed wire, fine-line black and grey ink work, intricate layered occult sigils, dramatic chiaroscuro rim lighting, high contrast stippling, deep ink-bleeding shadows, centered on dark garment, no low-resolution, no amateur vectors, no blurry lines $stagingTag"
+        val placementMatrix = "Center Chest (11\" x 13\") & Full Back Print (14\" x 16\")"
+        val previewUrl = "https://pollinations.ai/p/${java.net.URLEncoder.encode(masterPrompt, "UTF-8")}"
+
         val designMessage = AgentMessageEntity(
             senderAgentId = "4",
-            senderAgentName = "POD Design Agent",
+            senderAgentName = "Lead Autonomous Design Director AI",
             recipientAgentId = "10",
             messageType = "CLEARANCE_REQUEST",
             subject = "Design Clearance Request: $designTitle",
-            body = "Generated 300 DPI vector graphic. Submitting to Compliance Agent for trademark verification before asking human user.",
-            payloadJson = """{"title":"$designTitle","sku":"SKU-POD-${System.currentTimeMillis() % 10000}"}""",
+            body = "Generated master-class 300 DPI vector graphic. Submitting to Compliance Agent for trademark verification before holding in PENDING STAGING for human review.",
+            payloadJson = """{"title":"$designTitle","masterPrompt":"$masterPrompt","placementMatrix":"$placementMatrix","stagingTag":"$stagingTag"}""",
             timestamp = now + 100
         )
         repository.insertAgentMessage(designMessage)
 
         // 3. Compliance Agent rigorously screens trademark
-        val complianceCheck = verifyTrademarkAndCopyright(designTitle, "POD_DESIGN", "Original vector geometry")
+        val complianceCheck = verifyTrademarkAndCopyright(designTitle, "POD_DESIGN", "Original fine-line luxury streetwear vector")
 
         if (complianceCheck.verificationStatus != "CLEARED_SAFE") {
             return@withContext Result.failure(IllegalStateException("Infringement block: ${complianceCheck.trademarkCollisions}"))
@@ -149,7 +154,7 @@ class MultiAgentOrchestrator(
             recipientAgentId = "1",
             messageType = "AUDIT_RESPONSE",
             subject = "Clearance Certificate Issued: $designTitle",
-            body = "Verified USPTO Class 025 and Copyright records. 0 collisions. Certificate Hash: ${complianceCheck.clearanceHash}. Safe for user sign-off.",
+            body = "Verified USPTO Class 025 and Copyright records. 0 collisions. Certificate Hash: ${complianceCheck.clearanceHash}. Safe for human sign-off in PENDING STAGING.",
             payloadJson = """{"status":"CLEARED_SAFE","hash":"${complianceCheck.clearanceHash}"}""",
             timestamp = now + 200
         )
@@ -158,9 +163,9 @@ class MultiAgentOrchestrator(
         // 5. Place in Human Inbound Approvals Register
         val decision = DecisionEntity(
             id = UUID.randomUUID().toString(),
-            agentSource = "Multi-Agent Pitch Team (Scout + Design + Compliance)",
-            description = "Launch Pitch: '$designTitle' [Verified 100% Clean Trademark, Est Net: $14.50 / sale]",
-            payloadJson = """{"product":"Heavyweight T-Shirt","cost":1180,"price":2850,"fee":220,"profit":1450,"compliance":"USPTO & Copyright Cleared (${complianceCheck.clearanceHash})","niche":"$targetNiche"}""",
+            agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
+            description = "Review KL Staged Design: '$designTitle' [$38.00 Retail | PENDING_STAGING]",
+            payloadJson = """{"type":"POD_DESIGN","product":"Heavyweight T-Shirt","cost":1250,"price":3800,"fee":220,"profit":2330,"compliance":"USPTO & Copyright Cleared (${complianceCheck.clearanceHash})","niche":"$targetNiche","title":"$designTitle","masterPrompt":"$masterPrompt","placementMatrix":"$placementMatrix","stagingTag":"$stagingTag","preview":"$previewUrl"}""",
             status = "PENDING",
             timestamp = System.currentTimeMillis()
         )

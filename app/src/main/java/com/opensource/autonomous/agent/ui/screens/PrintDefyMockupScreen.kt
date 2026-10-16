@@ -61,14 +61,14 @@ val CATALOG_COLORS = listOf(
 data class GraphicPreset(val id: String, val title: String, val category: String, val primaryColor: Color)
 
 val GRAPHIC_PRESETS = listOf(
-    GraphicPreset("retro_mountain", "Retro Sunset Mountain", "Landscape", Color(0xFFF59E0B)),
-    GraphicPreset("botanical_fern", "Botanical Fern Frond", "Nature", Color(0xFF10B981)),
-    GraphicPreset("cyber_crest", "Cyberpunk Hex Crest", "Streetwear", Color(0xFF06B6D4)),
-    GraphicPreset("vintage_skull", "Rose & Vintage Skull", "Tattoo", Color(0xFFEF4444)),
-    GraphicPreset("celestial_orbit", "Celestial Sun & Orbit", "Boho", Color(0xFF8B5CF6)),
-    GraphicPreset("japanese_wave", "Vintage Ukiyo-e Wave", "Classic", Color(0xFF3B82F6)),
-    GraphicPreset("coffee_roast", "Artisan Coffee Emblem", "Craft", Color(0xFFD97706)),
-    GraphicPreset("minimal_line", "Continuous Line Profile", "Minimal", Color(0xFFEC4899))
+    GraphicPreset("kl_crest", "KL Gothic Monogram Crest", "Luxury Streetwear", Color(0xFFF8FAFC)),
+    GraphicPreset("chicano_payasa", "Payasa Fine-Line Portrait", "Chicano Culture", Color(0xFFE2E8F0)),
+    GraphicPreset("egyptian_scarab", "Occult Scarab & Ankh", "Egyptian Mysticism", Color(0xFFF59E0B)),
+    GraphicPreset("hellhound_wire", "Crowned Hellhound & Barbed Wire", "Dark Occult", Color(0xFFEF4444)),
+    GraphicPreset("gothic_paisley", "Intricate Paisley & Metallic Razor", "Hyper-Detailed", Color(0xFF38BDF8)),
+    GraphicPreset("vintage_skull", "Rose & Demonic Skull", "Underground Ink", Color(0xFF94A3B8)),
+    GraphicPreset("cyber_crest", "Hieroglyphic Scripture Seal", "Street Luxury", Color(0xFF06B6D4)),
+    GraphicPreset("minimal_line", "KL Razor Blade Spikes", "Metallic Detail", Color(0xFFEC4899))
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,39 +110,8 @@ fun PrintDefyMockupScreen(
         }
     }
 
-    // Auto-seed vibrant showcase design on first load
+    // Clean live canvas - no fake demo data auto-seeded
     val coroutineScope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        if (layers.isEmpty()) {
-            viewModel.addCustomDesignLayer(
-                DesignLayer(
-                    id = java.util.UUID.randomUUID().toString(),
-                    type = LayerType.IMAGE,
-                    name = "Retro Sunset Mountain",
-                    x = 0f,
-                    y = -20f,
-                    scale = 1.15f,
-                    rotation = 0f,
-                    region = "Front Side",
-                    graphicPreset = "retro_mountain"
-                )
-            )
-            viewModel.addCustomDesignLayer(
-                DesignLayer(
-                    id = java.util.UUID.randomUUID().toString(),
-                    type = LayerType.TEXT,
-                    name = "PACIFIC COAST",
-                    x = 0f,
-                    y = 52f,
-                    scale = 0.95f,
-                    rotation = 0f,
-                    region = "Front Side",
-                    colorHex = "#F8FAFC",
-                    fontStyle = "SANS_SERIF"
-                )
-            )
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -1054,7 +1023,7 @@ fun PrintDefyMockupScreen(
                             )
                             Text("Quick Presets", style = MaterialTheme.typography.labelSmall)
                             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                listOf("Retro 70s Sunset", "Minimalist Line Art", "Cyberpunk Kanji", "Vintage Botanical").forEach { chip ->
+                                listOf("Chicano Payasa Fine-Line", "Dark Occult Sigils & Skulls", "Egyptian Scarab & Ankh", "Gothic Paisley Monogram", "Hellhound in Barbed Wire").forEach { chip ->
                                     SuggestionChip(
                                         onClick = { aiPrompt = chip },
                                         label = { Text(chip, fontSize = 11.sp) }

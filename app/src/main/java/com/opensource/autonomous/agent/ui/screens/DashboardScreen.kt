@@ -535,7 +535,7 @@ fun DashboardScreen(
                         ) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Clear Demo Data", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                            Text("Enforce Live (Purge Demo)", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

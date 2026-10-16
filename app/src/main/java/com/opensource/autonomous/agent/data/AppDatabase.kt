@@ -265,18 +265,18 @@ abstract class AppDatabase : RoomDatabase() {
             // Seed Autonomous Storefront Location & Setup
             val defaultStorefront = StorefrontEntity(
                 id = "storefront-main",
-                companyName = "Print Defy Studio",
-                businessNiche = "Sustainable Apparel & Modern Creator Goods",
-                platformType = "GitHub Pages Jamstack Edge + Stripe Payment Links",
+                companyName = "Kritical Limitz",
+                businessNiche = "Underground Luxury Streetwear (POD)",
+                platformType = "Printify Pop-Up Store + GitHub Pages Edge",
                 status = "ACTIVE",
-                repoName = "printdefy-storefront",
+                repoName = "kriticallimitz-storefront",
                 repoUrl = "https://kriticallimitz.printify.me",
-                stripePaymentLink = "https://checkout.stripe.com/pay/cs_live_printdefy",
+                stripePaymentLink = "https://checkout.stripe.com/pay/cs_live_kriticallimitz",
                 monthlyRevenueCents = 0L,
                 monthlyCostCents = 0L,
                 productsCount = 0,
                 complianceStatus = "VERIFIED_100_CLEAN",
-                setupLog = "Autonomous storefront online. Domain: kriticallimitz.printify.me. Backend Edge: port 8080. Zero-cost capital directive active.",
+                setupLog = "Kritical Limitz POD Pop-Up Store online. Domain: kriticallimitz.printify.me. Strictly $0 COGS capital mandate active.",
                 createdAt = now
             )
             db.storefrontDao().insertStorefront(defaultStorefront)
