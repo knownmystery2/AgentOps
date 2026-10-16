@@ -52,6 +52,7 @@ typealias DesktopPrintZone = PrintifyPrintZone
 val DESKTOP_CATALOG: List<PrintifyProductBlank> = PRINTIFY_CATALOG
 val DESKTOP_SWATCHES: List<PrintifyColorSwatch> = PRINTIFY_SWATCHES
 val DESKTOP_ZONES: Map<String, PrintifyPrintZone> = PRINTIFY_ZONES
+val CLIPART_PRESETS: List<ClipartPreset> = STREETWEAR_CLIPART_PRESETS
 
 object PodAutoScaler {
     enum class ScalingMode {
@@ -60,6 +61,20 @@ object PodAutoScaler {
         FIT_HEIGHT,
         CENTER_XY,
         RESET_NORMAL
+    }
+
+    fun centerLayer(layer: PodVectorLayer): PodVectorLayer {
+        return layer.copy(offsetX = 0f, offsetY = 0f)
+    }
+
+    fun fitLayerToSafeZone(layer: PodVectorLayer, mode: ScalingMode = ScalingMode.FIT_SAFE_90): PodVectorLayer {
+        return when (mode) {
+            ScalingMode.FIT_SAFE_90 -> layer.copy(offsetX = 0f, offsetY = 0f, scale = 0.9f)
+            ScalingMode.FIT_WIDTH -> layer.copy(offsetX = 0f, scale = 1.1f)
+            ScalingMode.FIT_HEIGHT -> layer.copy(offsetY = 0f, scale = 1.15f)
+            ScalingMode.CENTER_XY -> layer.copy(offsetX = 0f, offsetY = 0f)
+            ScalingMode.RESET_NORMAL -> layer.copy(offsetX = 0f, offsetY = 0f, scale = 1.0f, rotation = 0f)
+        }
     }
 }
 

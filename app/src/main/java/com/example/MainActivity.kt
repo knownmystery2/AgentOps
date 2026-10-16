@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,7 +44,7 @@ class MainActivity : ComponentActivity() {
 
 enum class ScreenTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     CONSOLE("Console", Icons.Default.Dashboard),
-    TRANSACTIONS("Transactions", Icons.Default.FactCheck),
+    TRANSACTIONS("Transactions", Icons.AutoMirrored.Filled.FactCheck),
     OVERSEER("Overseer", Icons.Default.Shield),
     APPROVALS("Approvals", Icons.Default.PendingActions),
     POD("POD Studio", Icons.Default.Palette),

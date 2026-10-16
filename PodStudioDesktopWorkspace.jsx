@@ -127,6 +127,7 @@ export function PodStudioDesktopWorkspace({ currentView = 'designer', onNavigate
   const [aiQueueStatus, setAiQueueStatus] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishSuccessBanner, setPublishSuccessBanner] = useState(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
 
   // State: Live Canvas Telemetry Debugger
   const [canvasPayload, setCanvasPayload] = useState({});
@@ -341,42 +342,69 @@ export function PodStudioDesktopWorkspace({ currentView = 'designer', onNavigate
     updatePayloadDebugger();
   };
 
-  // AI Mockup Generation Handler
-  const handleQueueAiMockup = () => {
+  // AI Mockup Generation Handler (Hugging Face Inference API - Free Tier)
+  const handleQueueAiMockup = async () => {
     if (isGeneratingAi) return;
     setIsGeneratingAi(true);
-    setAiQueueStatus('Submitting prompt to Gemini image generation pipeline...');
-
-    setTimeout(() => {
-      setAiQueueStatus('Synthesizing studio lighting and garment texture...');
-      setTimeout(() => {
-        setIsGeneratingAi(false);
-        setAiQueueStatus('Mockup rendered! Asset mapped to SKU: ' + computedSku);
-        setTimeout(() => setAiQueueStatus(null), 6000);
-      }, 1400);
-    }, 1200);
+    setAiQueueStatus('Submitting prompt to Hugging Face image pipeline...');
+    try {
+      const hfToken = process.env.REACT_APP_HF_TOKEN; // free HF token
+      const response = await fetch(
+        'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${hfToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ inputs: aiPrompt })
+        }
+      );
+      if (!response.ok) throw new Error(`HF API error: ${response.status}`);
+      const blob = await response.blob();
+      const imageUrl = URL.createObjectURL(blob);
+      setGeneratedImageUrl(imageUrl);
+      setAiQueueStatus('Mockup rendered — asset mapped to SKU: ' + computedSku);
+    } catch (e) {
+      setAiQueueStatus('Generation failed: ' + e.message);
+    } finally {
+      setIsGeneratingAi(false);
+      setTimeout(() => setAiQueueStatus(null), 6000);
+    }
   };
 
-  // Live Publishing Handler
-  const handlePublishLive = () => {
+  // Live Publishing Handler (Printify API via Backend Relay - Free Tier)
+  const handlePublishLive = async () => {
     if (isPublishing) return;
     setIsPublishing(true);
-
-    setTimeout(() => {
-      const syncId = `SYNC-PTFY-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-      setIsPublishing(false);
+    try {
+      const res = await fetch('/api/publish-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku: computedSku,
+          productId: selectedProduct.id,
+          colorHex: selectedColor.hex,
+          zone: selectedZone,
+          mockupImageUrl: generatedImageUrl
+        })
+      });
+      if (!res.ok) throw new Error(`Publish failed: ${res.status}`);
+      const data = await res.json();
       setPublishSuccessBanner({
-        syncId,
+        syncId: data.printifyProductId,
         sku: computedSku,
         timestamp: new Date().toLocaleTimeString()
       });
-
       if (typeof onNavigateAway === 'function') {
-        setTimeout(() => {
-          onNavigateAway('storefront');
-        }, 1800);
+        setTimeout(() => onNavigateAway('storefront'), 1800);
       }
-    }, 1500);
+    } catch (e) {
+      console.error('Publish error:', e);
+      setPublishSuccessBanner(null);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   // Safely cleanup before exiting
@@ -722,6 +750,14 @@ export function PodStudioDesktopWorkspace({ currentView = 'designer', onNavigate
                 ref={canvasElementRef}
                 className="w-full h-full block cursor-move"
               />
+
+              {generatedImageUrl && (
+                <img
+                  src={generatedImageUrl}
+                  alt="AI Generated Mockup"
+                  className="absolute inset-0 w-full h-full object-cover rounded-md opacity-90 pointer-events-none"
+                />
+              )}
             </div>
           </div>
 
