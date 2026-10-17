@@ -374,114 +374,20 @@ data class AutonomousAgent(
          */
         val DEFAULT_SWARM: List<AutonomousAgent> = listOf(
             AutonomousAgent(
-                id = "0",
-                name = "GOD",
-                role = OperationalRole.GOD_OVERSEER,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-4-argon (Interceptor)",
-                currentTask = "Silent surveillance: Intercepting live actions before execution",
-                capabilities = listOf("ABSOLUTE_VETO", "PROMPT_INJECTION_SHIELD", "FAIL_SAFE_HALT", "ROGUE_KEY_BLOCK", "ZERO_COST_GUARD")
-            ),
-            AutonomousAgent(
-                id = "1",
-                name = "Orchestrator Agent",
-                role = OperationalRole.EXECUTIVE_ORCHESTRATOR,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "llama3:8b",
-                currentTask = "Monitoring swarm task queue & router",
-                capabilities = listOf("TASK_ROUTING", "BRIEFING_GENERATION", "DECISION_ORCHESTRATION")
-            ),
-
-            AutonomousAgent(
-                id = "2",
-                name = "Trend & Niche Scout",
-                role = OperationalRole.MARKET_RESEARCH_SCOUT,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "llama3:8b",
-                currentTask = "Tracking trending zero-cost niches",
-                capabilities = listOf("MARKET_SCRAPING", "NICHE_SCORING", "COMPETITOR_BENCHMARKING")
-            ),
-            AutonomousAgent(
-                id = "3",
-                name = "Brand Agent",
-                role = OperationalRole.BRAND_IDENTITY_ARCHITECT,
-                status = AgentStatus.STANDBY,
-                modelEngine = "llama3:8b",
-                currentTask = "Standby: Awaiting new niche pipeline",
-                capabilities = listOf("BRAND_NAMING", "VOICE_GUIDELINES", "RISK_CONTAINMENT")
-            ),
-            AutonomousAgent(
                 id = "4",
-                name = "Lead Autonomous Design Director AI",
+                name = "ULTRA",
                 role = OperationalRole.PRODUCT_DESIGNER_POD,
                 status = AgentStatus.ACTIVE,
                 modelEngine = "gemini-4-argon",
                 systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
-                currentTask = "Engineering Kritical Limitz master-class 300 DPI luxury underground streetwear mockups via Gemini 4 Argon",
-                capabilities = listOf("LUXURY_UNDERGROUND_POD", "VECTOR_SYNTHESIS", "MOCKUP_MAPPING", "BLEED_VALIDATION", "PENDING_STAGING_ENFORCEMENT")
-            ),
-            AutonomousAgent(
-                id = "5",
-                name = "Listing & SEO Agent",
-                role = OperationalRole.CATALOG_SEO_COPYWRITER,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "llama3:8b",
-                currentTask = "Optimizing Etsy/Shopify metadata & 13 SEO tags",
-                capabilities = listOf("SEO_TAG_MINING", "TITLE_COPYWRITING", "BULLET_OPTIMIZATION")
-            ),
-            AutonomousAgent(
-                id = "6",
-                name = "Dropship Sourcing Agent",
-                role = OperationalRole.SUPPLIER_PROCUREMENT,
-                status = AgentStatus.STANDBY,
-                modelEngine = "mistral:7b",
-                currentTask = "Standby: Verified supplier catalog synced",
-                capabilities = listOf("SUPPLIER_VETTING", "COGS_CALCULATION", "ZERO_UPFRONT_VALIDATION")
-            ),
-            AutonomousAgent(
-                id = "7",
-                name = "Marketing Agent",
-                role = OperationalRole.ORGANIC_GROWTH_MARKETER,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "llama3:8b",
-                currentTask = "Producing organic Pinterest pins & TikTok scripts",
-                capabilities = listOf("PIN_CREATION", "REEL_SCRIPTING", "OUTBOUND_EMAIL_FUNNELS")
-            ),
-            AutonomousAgent(
-                id = "8",
-                name = "Customer Service Agent",
-                role = OperationalRole.CUSTOMER_SUCCESS_CRM,
-                status = AgentStatus.STANDBY,
-                modelEngine = "mistral:7b",
-                currentTask = "Standby: Listening for customer inquiry webhooks",
-                capabilities = listOf("SUPPORT_TRIAGE", "EMPATHETIC_REPLY", "REFUND_GATEWAY")
-            ),
-            AutonomousAgent(
-                id = "9",
-                name = "Finance Agent",
-                role = OperationalRole.FINANCIAL_CONTROLLER,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "deepseek-coder:6.7b",
-                currentTask = "Auditing double-entry ledger & whole cent balances",
-                capabilities = listOf("LEDGER_AUDITING", "UNIT_ECONOMICS", "SCHEDULE_C_TAX")
-            ),
-            AutonomousAgent(
-                id = "10",
-                name = "Compliance Agent",
-                role = OperationalRole.COMPLIANCE_LEGAL_AUDITOR,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "open-source-ip-filter",
-                currentTask = "Screening merchandise against USPTO records",
-                capabilities = listOf("USPTO_TRADEMARK_LOOKUP", "DECEPTIVE_CLAIM_AUDIT", "IP_CLEARANCE")
-            ),
-            AutonomousAgent(
-                id = "11",
-                name = "Reliability Agent",
-                role = OperationalRole.INFRASTRUCTURE_RELIABILITY,
-                status = AgentStatus.ACTIVE,
-                modelEngine = "local-open-weights",
-                currentTask = "Monitoring free-tier quotas & failover pool",
-                capabilities = listOf("QUOTA_MONITORING", "BACKOFF_RETRY", "FAILOVER_ROTATION")
+                currentTask = "Single Agent • Creative (8 Aesthetic Systems + 6 Laws), Printify Studio Clone Canvas, Live Printify Publishing & Stripe Webhook Ledger",
+                capabilities = listOf(
+                    "CREATIVE_SYNTHESIS",
+                    "PRINTIFY_STUDIO_CANVAS",
+                    "LIVE_PRINTIFY_PUBLISHING",
+                    "STRIPE_PAYMENT_VERIFICATION",
+                    "ZERO_FAKE_DATA_INTEGRITY"
+                )
             )
         )
     }

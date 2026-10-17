@@ -275,36 +275,14 @@ class MultiAgentSwarmCluster(
                     repository.insertDigitalProduct(digitalProduct)
                     createdProducts.add(digitalProduct)
 
-                    // Staging POD Mockup Order in PENDING_STAGING
+                    // Section 2C: Design generation and approvals are creative events — never write to pod_orders / transaction ledger
                     val genSku = "KL-${polishedDesign.title.take(6).uppercase().replace("[^A-Z0-9]".toRegex(), "")}-2026"
-                    val podMockupOrder = PodOrderEntity(
-                        id = "pod-ord-" + UUID.randomUUID().toString().take(8),
-                        sku = genSku,
-                        product = "Kritical Limitz - ${polishedDesign.title}",
-                        color = "Obsidian Black",
-                        placement = polishedDesign.placementMatrix,
-                        status = "PENDING_STAGING",
-                        progressPercent = 100,
-                        vectorDpi = 300,
-                        customerEmail = "ops@kriticallimitz.printify.me",
-                        priceCents = polishedDesign.suggestedPriceCents,
-                        payloadJson = gson.toJson(mapOf(
-                            "title" to polishedDesign.title,
-                            "conceptBreakdown" to polishedDesign.conceptBreakdown,
-                            "masterPrompt" to polishedDesign.masterPrompt,
-                            "placementMatrix" to polishedDesign.placementMatrix,
-                            "stagingTag" to polishedDesign.stagingTag,
-                            "preview" to imagePreviewUrl
-                        )),
-                        timestamp = System.currentTimeMillis()
-                    )
-                    db.podOrderDao().insertOrder(podMockupOrder)
 
-                    // Gatekeeper: Enqueue in Human Approvals Queue
+                    // Gatekeeper: Enqueue in Creative Design Approvals Queue
                     val decision = DecisionEntity(
                         id = UUID.randomUUID().toString(),
-                        agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
-                        description = "Review KL Staged Design: '${polishedDesign.title}' [$${"%.2f".format(polishedDesign.suggestedPriceCents / 100.0)} | PENDING_STAGING]",
+                        agentSource = "ULTRA (Gemini 4 Argon)",
+                        description = "Review ULTRA Staged Design: '${polishedDesign.title}' ($genSku) [PENDING_STAGING]",
                         payloadJson = gson.toJson(mapOf(
                             "type" to "POD_DESIGN",
                             "productId" to productId,

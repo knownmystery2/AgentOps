@@ -19,6 +19,9 @@ interface AgentDao {
 
     @Query("UPDATE agents SET isActive = :isActive WHERE id = :id")
     suspend fun updateAgentStatus(id: String, isActive: Boolean)
+
+    @Query("DELETE FROM agents")
+    suspend fun clearAgents()
 }
 
 @Dao

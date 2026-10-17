@@ -204,77 +204,45 @@ fun PodStudioDesktopWorkspace(
         gson.toJson(payload)
     }
 
-    // Function to publish order & double-entry ledger settlement into Room DB
+    // Section 2C: Design approvals and canvas saves are creative workflow events.
+    // They never touch pod_orders or the financial transaction ledger.
     fun publishToBackendRoute() {
         if (isPublishing) return
         isPublishing = true
 
         coroutineScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
-            val orderId = "pod-ord-" + UUID.randomUUID().toString().take(8)
+            val designId = "design-" + UUID.randomUUID().toString().take(8)
 
             try {
                 val db = AppDatabase.getInstance(context)
 
-                // 1. Insert into Room PodOrderDao
-                val newOrder = PodOrderEntity(
-                    id = orderId,
-                    sku = computedSku,
-                    product = "Kritical Limitz - ${selectedProduct.name}",
-                    color = selectedColor.name,
-                    placement = currentZone.name,
-                    status = "PENDING_STAGING",
-                    progressPercent = 100,
-                    vectorDpi = 300,
-                    customerEmail = "ops@kriticallimitz.printify.me",
-                    priceCents = selectedProduct.retailPriceCents,
-                    payloadJson = formattedPrintifyPayload,
-                    timestamp = now
-                )
-                db.podOrderDao().insertOrder(newOrder)
-
-                // 2. Queue into Human Approvals Decision Register
+                // 1. Queue into Creative Design Approval Register (never into pod_orders or transaction ledger)
                 db.decisionDao().insertDecision(
                     DecisionEntity(
                         id = "dec-pod-" + UUID.randomUUID().toString().take(8),
-                        agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
-                        description = "Verify & Publish POD Design: '${selectedProduct.name}' ($computedSku) [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                        agentSource = "ULTRA (Gemini 4 Argon)",
+                        description = "Approve & Publish ULTRA POD Design: '${selectedProduct.name}' ($computedSku) [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
                         payloadJson = formattedPrintifyPayload,
                         status = "PENDING",
                         timestamp = now
                     )
                 )
 
-                // Staged design is held in PENDING STAGING awaiting human review.
-                // Financial ledger remains 100% strictly for verified live customer sales only.
-
+                // 2. Record in Creative Design Log (designLog)
                 db.logDao().insertLog(
                     LogEntity(
-                        agentId = "Lead Autonomous Design Director AI",
-                        message = "Kritical Limitz design held in PENDING STAGING: $computedSku. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
+                        agentId = "ULTRA",
+                        message = "[designLog] ULTRA design staged for approval ($designId): $computedSku. [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]",
                         timestamp = now
                     )
                 )
 
-                // 4. Update viewModel live queue
-                viewModel?.podQueue?.value = listOf(
-                    PodJobItem(
-                        id = orderId,
-                        sku = computedSku,
-                        product = "Kritical Limitz - ${selectedProduct.name}",
-                        color = selectedColor.name,
-                        placement = currentZone.name,
-                        status = "PENDING_STAGING",
-                        progressPercent = 100,
-                        vectorDpi = 300
-                    )
-                ) + (viewModel?.podQueue?.value ?: emptyList())
-
                 withContext(Dispatchers.Main) {
                     isPublishing = false
                     val profitDollars = String.format("%.2f", (selectedProduct.retailPriceCents - selectedProduct.cogsCents) / 100.0)
-                    publishSuccessBanner = "Staged in PENDING STAGING! SKU: $computedSku (Profit: +$$profitDollars) [STATUS: PENDING HUMAN REVIEW - LIFT LISTING RESTRICTION TO PUBLISH]"
-                    Toast.makeText(context, "Staged for Human Approval Register!", Toast.LENGTH_SHORT).show()
+                    publishSuccessBanner = "ULTRA Design Staged ($designId)! SKU: $computedSku (Margin: +$$profitDollars) — Approve to Publish ✓"
+                    Toast.makeText(context, "ULTRA Design logged to Creative Approval Register!", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -708,7 +676,7 @@ fun PodStudioDesktopWorkspace(
                                                         },
                                                         onGenerateAi = { prompt ->
                                                             val newLayer = PodVectorLayer(
-                                                                name = "AI: ${prompt.take(14)}",
+                                                                name = "ULTRA AI: ${prompt.take(14)}",
                                                                 type = PodLayerType.AI_ART,
                                                                 textContent = prompt,
                                                                 tintHex = "#FFFFFF",
@@ -716,6 +684,11 @@ fun PodStudioDesktopWorkspace(
                                                             )
                                                             layers = layers + newLayer
                                                             selectedLayerId = newLayer.id
+                                                            viewModel?.generateAutonomousDesignMockup(
+                                                                conceptTheme = prompt,
+                                                                garmentType = selectedProduct.name,
+                                                                garmentColorHex = selectedColor.hex
+                                                            )
                                                         },
                                                         isDarkTheme = isDarkTheme
                                                     )

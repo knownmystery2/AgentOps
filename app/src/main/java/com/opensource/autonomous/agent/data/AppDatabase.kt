@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
         PodOrderEntity::class,
         PendingTransactionEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -86,162 +86,65 @@ abstract class AppDatabase : RoomDatabase() {
                 super.onOpen(db)
                 INSTANCE?.let { database ->
                     scope.launch(Dispatchers.IO) {
-                        ensureGodAgentSeeded(database)
-                        ensurePendingTransactionsSeeded(database)
+                        ensureUltraAgentAndPurgeFakeTransactions(database)
                     }
                 }
             }
         }
 
         /**
-         * Ensures initial real-world pending transactions requiring human authorization are available.
+         * Section 1 & Section 2A/2B/2C enforcement:
+         * Ensures only the single ULTRA agent exists and purges any fake/demo purchase requests or staging orders
+         * from the transaction and order tables.
          */
-        suspend fun ensurePendingTransactionsSeeded(db: AppDatabase) {
+        suspend fun ensureUltraAgentAndPurgeFakeTransactions(db: AppDatabase) {
             try {
-                val count = db.pendingTransactionDao().getAllTransactions().first().size
-                if (count == 0) {
-                    val now = System.currentTimeMillis()
-                    val initialTx = listOf(
-                        PendingTransactionEntity(
-                            id = "TX-APPR-101",
-                            transactionCode = "TX-POD-77401",
-                            title = "Printify Heavyweight Garment Production Batch",
-                            description = "Automated fulfillment batch for 14 Acid Wash Vintage Streetwear Tees with 300 DPI vector placement.",
-                            storeOrEntity = "Print Defy Studio",
-                            platform = "Printify POD Gateway",
-                            vendorOrPayee = "SwiftPOD Fulfillment Center (US)",
-                            accountDebit = "5010 Cost of Goods Sold",
-                            accountCredit = "1010 Operating Cash Clearing",
-                            amountCents = 17500L,
-                            category = "COGS",
-                            riskScore = 18,
-                            riskReason = "Automated audit passed: Validated customer deposit exceeds COGS by 54%.",
-                            status = "PENDING",
-                            createdAt = now - 1800000L
-                        ),
-                        PendingTransactionEntity(
-                            id = "TX-APPR-102",
-                            transactionCode = "TX-REF-88912",
-                            title = "Customer Size Exchange Refund Request",
-                            description = "Customer requested size exchange adjustment for Order #ORD-9921 (Oversized Hoodie).",
-                            storeOrEntity = "kriticallimitz.printify.me",
-                            platform = "Stripe Payments",
-                            vendorOrPayee = "sarah.miller@example.com",
-                            accountDebit = "4030 Sales Returns & Allowances",
-                            accountCredit = "1020 Customer Accounts Receivable",
-                            amountCents = 3450L,
-                            category = "REFUND",
-                            riskScore = 35,
-                            riskReason = "Requires manual confirmation: Discretionary exchange balance.",
-                            status = "PENDING",
-                            createdAt = now - 3600000L
-                        ),
-                        PendingTransactionEntity(
-                            id = "TX-APPR-103",
-                            transactionCode = "TX-LOG-33019",
-                            title = "Expedited Priority Carrier Freight Dispatch",
-                            description = "FedEx priority logistics dispatch for bulk pop-up physical merchandise inventory transfer.",
-                            storeOrEntity = "Print Defy Logistics",
-                            platform = "FedEx API Direct",
-                            vendorOrPayee = "FedEx Express Corp",
-                            accountDebit = "5020 Shipping & Logistics Expense",
-                            accountCredit = "1010 Operating Cash Clearing",
-                            amountCents = 6840L,
-                            category = "VENDOR_EXPENSE",
-                            riskScore = 14,
-                            riskReason = "Automated rate quote matched against standard commercial shipping matrix.",
-                            status = "PENDING",
-                            createdAt = now - 7200000L
-                        ),
-                        PendingTransactionEntity(
-                            id = "TX-APPR-104",
-                            transactionCode = "TX-ROY-44120",
-                            title = "Digital Creator Royalty Revenue Payout",
-                            description = "Weekly 100% margin net digital revenue payout allocation to creator treasury wallet.",
-                            storeOrEntity = "Autonomous Studio",
-                            platform = "Stripe Connect ACH",
-                            vendorOrPayee = "Treasury Reserve Payout",
-                            accountDebit = "3010 Creator Retained Earnings",
-                            accountCredit = "1010 Operating Cash Clearing",
-                            amountCents = 42000L,
-                            category = "PAYOUT",
-                            riskScore = 22,
-                            riskReason = "Threshold alert: Single transaction payout exceeds $250.00 security checkpoint.",
-                            status = "PENDING",
-                            createdAt = now - 14400000L
-                        ),
-                        PendingTransactionEntity(
-                            id = "TX-APPR-105",
-                            transactionCode = "TX-RAW-55091",
-                            title = "Wholesale Ceramic Mugs Raw Restock",
-                            description = "Restock invoice for 36 11oz High-Gloss Ceramic Vector Mugs with eco-friendly protective packaging.",
-                            storeOrEntity = "Print Defy Studio",
-                            platform = "Printify Gateway",
-                            vendorOrPayee = "District Photo Inc",
-                            accountDebit = "1030 Merchandise Inventory Asset",
-                            accountCredit = "2010 Accounts Payable",
-                            amountCents = 8820L,
-                            category = "COGS",
-                            riskScore = 12,
-                            riskReason = "Automated clearance: Verified below wholesale bulk discount threshold.",
-                            status = "PENDING",
-                            createdAt = now - 28800000L
-                        )
-                    )
-                    db.pendingTransactionDao().insertTransactions(initialTx)
+                // Purge any fake seeded transactions (TX-APPR-101..105 or any entry lacking real Stripe + Printify IDs)
+                val allTx = db.pendingTransactionDao().getAllTransactions().first()
+                for (tx in allTx) {
+                    if (tx.id.startsWith("TX-APPR-10") || !tx.description.contains("pi_") || !tx.description.contains("printify")) {
+                        db.pendingTransactionDao().deleteTransaction(tx.id)
+                    }
                 }
+
+                // Purge any design-staging items from pod_orders (Section 2C: Design approvals are NOT transactions)
+                val allOrders = db.podOrderDao().getAllOrders().first()
+                for (ord in allOrders) {
+                    if (ord.status == "PENDING_STAGING" || ord.id.startsWith("pod-ord-")) {
+                        db.podOrderDao().deleteOrder(ord.id)
+                    }
+                }
+
+                // Consolidate agent roster to the single ULTRA agent
+                db.agentDao().clearAgents()
+                db.agentDao().insertAgent(
+                    AgentEntity(
+                        id = "4",
+                        name = "ULTRA",
+                        role = "Single Autonomous Agent — Creative, Canvas, Publishing, Payments & Integrity",
+                        systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
+                        isActive = true
+                    )
+                )
             } catch (_: Exception) {}
         }
 
         /**
-         * Ensures GOD overseer and Lead Autonomous Design Director AI (Kritical Limitz) are seeded and up to date.
-         */
-        suspend fun ensureGodAgentSeeded(db: AppDatabase) {
-            val god = db.agentDao().getAgentById("0")
-            if (god == null) {
-                db.agentDao().insertAgent(
-                    AgentEntity(
-                        id = "0",
-                        name = "GOD",
-                        role = "The Interceptor Overseer & Silent Gatekeeper",
-                        systemPrompt = AgentPrompts.GOD_OVERSEER_SYSTEM_PROMPT,
-                        isActive = true
-                    )
-                )
-            }
-            // Always ensure Agent 4 has the Kritical Limitz Lead Autonomous Design Director AI system instructions
-            db.agentDao().insertAgent(
-                AgentEntity(
-                    id = "4",
-                    name = "Lead Autonomous Design Director AI",
-                    role = "POD Pop Up Storefront & Design Director for Kritical Limitz",
-                    systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
-                    isActive = true
-                )
-            )
-        }
-
-        /**
-         * Initializes clean database with GOD Overseer and Swarm Agents.
-         * ZERO demo ledger transactions, ZERO fake tasks, ZERO mock sales.
-         * Clean for 100% live working function.
+         * Initializes clean database with single ULTRA Agent.
+         * ZERO demo ledger transactions, ZERO fake purchase requests, ZERO mock sales.
          */
         suspend fun seedDatabase(db: AppDatabase) {
             val now = System.currentTimeMillis()
 
-            // 1. Seed Core Multi-Agent Swarm Cluster (All in ACTIVE status)
+            // 1. Seed Single ULTRA Agent (Section 1 — No Swarm, Single Agent Only)
             val agents = listOf(
-                AgentEntity("0", "GOD", "The Interceptor Overseer & Silent Gatekeeper", AgentPrompts.GOD_OVERSEER_SYSTEM_PROMPT, isActive = true),
-                AgentEntity("1", "Administrator AI", "Executive Administrator & Router", AgentPrompts.ADMINISTRATOR_SYSTEM_PROMPT, isActive = true),
-                AgentEntity("2", "Trend & Identity Agent", "Trend & Pop-Up Store Identity", AgentPrompts.TREND_IDENTITY_SYSTEM_PROMPT, isActive = true),
-                AgentEntity("3", "Brand Agent", "Identity & Voice Architecture", "ROLE: Brand Identity Architect. You establish brand tone and visual style guidelines.", isActive = true),
-                AgentEntity("4", "Lead Autonomous Design Director AI", "POD Pop Up Storefront & Design Director for Kritical Limitz", AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT, isActive = true),
-                AgentEntity("5", "Listing & SEO Agent", "E-Commerce Copywriter & Metadata", AgentPrompts.CONTENT_PROMPT, isActive = true),
-                AgentEntity("7", "Marketing Agent", "Organic Growth & Content Campaigns", AgentPrompts.MARKETING_PROMPT, isActive = true),
-                AgentEntity("8", "Customer Service Agent", "Support & Inquiries", AgentPrompts.SUPPORT_PROMPT, isActive = true),
-                AgentEntity("9", "Finance Agent", "Double-Entry Ledger & Compliance", AgentPrompts.FINANCE_PROMPT, isActive = true),
-                AgentEntity("10", "Legal Compliance Agent", "Trademark & Copyright Safety Filter", AgentPrompts.LEGAL_COMPLIANCE_SYSTEM_PROMPT, isActive = true),
-                AgentEntity("11", "Reliability Agent", "Model Failover & Standby Health", "ROLE: Reliability Agent. You monitor free tiers and handle open-source model rotation.", isActive = true)
+                AgentEntity(
+                    id = "4",
+                    name = "ULTRA",
+                    role = "Single Autonomous Agent — Creative, Canvas, Publishing, Payments & Integrity",
+                    systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
+                    isActive = true
+                )
             )
             db.agentDao().insertAgents(agents)
 
@@ -334,8 +237,8 @@ abstract class AppDatabase : RoomDatabase() {
             // 4. Initial System Startup Log
             db.logDao().insertLog(
                 LogEntity(
-                    agentId = "1",
-                    message = "Multi-Agent Swarm Cluster initialized. 10 Agents Online. Zero demo data. Live operating environment ready.",
+                    agentId = "ULTRA",
+                    message = "ULTRA Single Agent initialized (Gemini 4 Argon). Zero fake data, zero simulated orders. Live Printify POD Pop-Up Studio ready.",
                     timestamp = now
                 )
             )
@@ -348,6 +251,7 @@ abstract class AppDatabase : RoomDatabase() {
             db.taskDao().clearTasks()
             db.decisionDao().clearDecisions()
             db.ledgerDao().clearLedger()
+            db.pendingTransactionDao().clearAll()
             db.accountTaskDao().clearTasks()
             db.storefrontDao().clearStorefronts()
             db.trademarkDao().clearChecks()
@@ -356,13 +260,13 @@ abstract class AppDatabase : RoomDatabase() {
             db.agentMessageDao().clearMessages()
             db.logDao().clearLogs()
 
-            // Re-seed agents, settings, and providers if missing
+            // Re-seed single ULTRA agent, settings, and providers
             seedDatabase(db)
 
             db.logDao().insertLog(
                 LogEntity(
-                    agentId = "1",
-                    message = "All demo data removed. Everything set for live working function.",
+                    agentId = "ULTRA",
+                    message = "All demo data removed. ULTRA single-agent integrity enforced.",
                     timestamp = System.currentTimeMillis()
                 )
             )

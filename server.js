@@ -1,33 +1,131 @@
 import express from 'express';
+import Stripe from 'stripe';
 import { GoogleGenAI } from '@google/genai';
 import fetch from 'node-fetch';
+import { ULTRA, writeTransaction, ULTRA_IDENTITY_PROMPT } from './adminRunner.js';
 
 const router = express.Router();
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const CORE_MODEL = process.env.GEMINI_MODEL || 'gemini-4-argon';
 
-// Route A — Generate image prompt via Gemini
+// Section 3B — Stripe webhook for real order confirmation (must use raw body, not JSON-parsed body)
+router.post(
+  '/api/stripe-webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!stripe) {
+      return res.status(500).send('Stripe is not configured');
+    }
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET // from Stripe Dashboard -> Webhooks -> Signing secret
+      );
+    } catch (err) {
+      console.error('[ULTRA] Webhook signature failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      // Extract Printify order ID from metadata (set this when creating PaymentIntent)
+      const printifyOrderId = paymentIntent.metadata?.printifyOrderId;
+
+      if (!printifyOrderId) {
+        console.error('[ULTRA] payment_intent.succeeded received but no printifyOrderId in metadata');
+        return res.json({ received: true }); // Acknowledge but do not write
+      }
+
+      // Write REAL transaction — both IDs confirmed
+      await writeTransaction({
+        printifyOrderId,
+        stripePaymentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        customerEmail: paymentIntent.receipt_email,
+        recordedAt: new Date().toISOString()
+      });
+
+      console.log(`[ULTRA] Real transaction recorded: ${paymentIntent.id}`);
+    }
+
+    res.json({ received: true });
+  }
+);
+
+// Section 4B — Fetch live Printify catalog blueprints
+router.get('/api/catalog', async (req, res) => {
+  try {
+    const response = await fetch('https://api.printify.com/v1/catalog/blueprints.json', {
+      headers: { Authorization: `Bearer ${process.env.PRINTIFY_API_TOKEN}` }
+    });
+    if (!response.ok) throw new Error(`Catalog fetch failed: ${response.status}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Section 4B — Fetch variants and provider for a specific Printify blueprint
+router.get('/api/catalog/:blueprintId/variants', async (req, res) => {
+  try {
+    const { blueprintId } = req.params;
+    // Get print providers for this blueprint first
+    const provRes = await fetch(
+      `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers.json`,
+      { headers: { Authorization: `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+    );
+    if (!provRes.ok) throw new Error(`Providers fetch failed: ${provRes.status}`);
+    const providers = await provRes.json();
+    const providerId = providers[0]?.id; // Use first available provider
+    if (!providerId) throw new Error('No print provider available for this blueprint');
+
+    const varRes = await fetch(
+      `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`,
+      { headers: { Authorization: `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+    );
+    if (!varRes.ok) throw new Error(`Variants fetch failed: ${varRes.status}`);
+    const varData = await varRes.json();
+    const variants = Array.isArray(varData) ? varData : (varData.variants || []);
+    res.json({ variants, providerId });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Section 5D Step 1 — ULTRA writes its own prompt via Gemini
 router.post('/api/generate-prompt', async (req, res) => {
-  const { brandContext, recentPrompts, userHint } = req.body;
+  const { selectedProduct, selectedVariant, printZone, recentPrompts, userHint } = req.body;
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-4-argon',
-      contents: `You are the creative director of Print Defy, a high-end luxury streetwear brand.
-Brand identity: ${brandContext}
-Recent prompts (do not repeat): ${(recentPrompts || []).join(' | ')}
-User hint (optional): ${userHint || 'none'}
-Generate one image generation prompt for a physical garment graphic.
-Rules: transparent PNG, print-ready, luxury streetwear, no background, ultra high resolution.
+      model: CORE_MODEL,
+      contents: `${ULTRA_IDENTITY_PROMPT}
+
+Selected Garment: ${selectedProduct || 'garment'}
+Variant Options: ${JSON.stringify(selectedVariant || {})}
+Print Position: ${printZone || 'front'}
+Recent Prompts (do not repeat): ${(recentPrompts || []).join(' | ') || 'none'}
+User Hint (optional): ${userHint || 'none'}
+
+Generate one master image generation prompt blending at least two of the 8 Aesthetic Systems and enforcing all Six Non-Negotiable Laws.
+Rules: transparent PNG, hand-etched woodcut/single-needle linework, ruthless high-contrast ink black and ivory white, no background, ultra high resolution 300 DPI.
 Output only the prompt text. No preamble. No explanation.`
     });
-    const generatedPrompt = response.candidates[0].content.parts[0].text.trim()
-      + ', highly detailed, isolated on transparent background, no background, print-ready, fashion editorial quality, ultra high resolution';
+    const generatedPrompt =
+      response.candidates[0].content.parts[0].text.trim() +
+      ', master-grade hand-etched linework, woodcut hatching, single-needle precision, isolated on transparent background, no background, 300 DPI print-ready';
     res.json({ generatedPrompt });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Route B — Generate image via Hugging Face FLUX
+// Section 5D Step 2 — Generate image via Hugging Face FLUX.1-schnell
 router.post('/api/generate-image', async (req, res) => {
   const { prompt } = req.body;
   try {
@@ -51,7 +149,7 @@ router.post('/api/generate-image', async (req, res) => {
   }
 });
 
-// Route C — Remove background via RMBG-1.4
+// Section 5D Step 3 — Remove background via RMBG-1.4 for transparent PNG with alpha channel
 router.post('/api/remove-background', async (req, res) => {
   const { imageUrl } = req.body;
   try {
@@ -73,69 +171,44 @@ router.post('/api/remove-background', async (req, res) => {
     const transparentImageUrl = `data:image/png;base64,${resultBuffer.toString('base64')}`;
     res.json({ transparentImageUrl });
   } catch (e) {
-    // On RMBG failure — return original, log warning, do not fake anything
     console.warn('[ULTRA] Background removal failed, returning original:', e.message);
     res.json({ transparentImageUrl: req.body.imageUrl });
   }
 });
 
-// Route D — Publish physical product to Printify POD Pop-Up only
+// Publish physical product to Printify POD Pop-Up only
 router.post('/api/publish-product', async (req, res) => {
-  const { sku, productId, colorHex, zone, mockupImageUrl } = req.body;
-  if (!productId || !sku || !mockupImageUrl) {
-    return res.status(400).json({ error: 'Missing required fields: productId, sku, mockupImageUrl' });
-  }
   try {
-    const shopId = process.env.PRINTIFY_SHOP_ID;
-    const createRes = await fetch(`https://api.printify.com/v1/shops/${shopId}/products.json`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.PRINTIFY_API_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: `Print Defy — ${sku}`,
-        blueprint_id: parseInt(productId),
-        print_provider_id: parseInt(process.env.PRINTIFY_PROVIDER_ID),
-        variants: [{ id: parseInt(productId), price: 2999, is_enabled: true }],
-        print_areas: [{
-          variant_ids: [parseInt(productId)],
-          placeholders: [{ position: zone, images: [{ id: sku, x: 0.5, y: 0.5, scale: 1, angle: 0 }] }]
-        }]
-      })
-    });
-    if (!createRes.ok) {
-      const err = await createRes.text();
-      throw new Error(`Printify create failed: ${createRes.status} — ${err}`);
-    }
-    const created = await createRes.json();
+    const {
+      sku,
+      blueprintId,
+      productId,
+      providerId,
+      variantId,
+      zone,
+      mockupImageUrl
+    } = req.body;
 
-    // Publish to live store
-    const publishRes = await fetch(
-      `https://api.printify.com/v1/shops/${shopId}/products/${created.id}/publish.json`,
-      { method: 'POST', headers: { Authorization: `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
-    );
-    if (!publishRes.ok) throw new Error(`Printify publish failed: ${publishRes.status}`);
-
-    res.json({
-      printifyProductId: created.id, // real Printify ID — never fabricated
-      storeUrl: `https://printify.com/manage-my-store/${created.id}`
+    const result = await ULTRA.publishProduct({
+      sku,
+      blueprintId: blueprintId || productId,
+      providerId,
+      variantId: variantId || productId,
+      zone,
+      mockupImageUrl
     });
+
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Route E — Log design approval (creative event — separate from transactions)
+// Log design approval (creative workflow event — never touches transactionLedger)
 router.post('/api/log-design-approval', async (req, res) => {
-  const { designId, sku, approvedAt } = req.body;
   try {
-    const fs = await import('fs/promises');
-    let log = [];
-    try { log = JSON.parse(await fs.readFile('./design-approvals.json', 'utf8')); } catch {}
-    log.push({ designId, sku, approvedAt });
-    await fs.writeFile('./design-approvals.json', JSON.stringify(log, null, 2));
-    res.json({ logged: true });
+    const entry = await ULTRA.logDesignApproval(req.body);
+    res.json({ logged: true, entry });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

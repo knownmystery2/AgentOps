@@ -120,7 +120,7 @@ fun LiveSwarmControlCenterView(
     onPromptChange: (String) -> Unit,
     onDeploy: () -> Unit
 ) {
-    val swarmAgents by viewModel.liveSwarmAgents.collectAsState()
+    val ultraAgents by viewModel.liveSwarmAgents.collectAsState()
     val isLiveConnected by viewModel.isLiveConnected.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val activeEndpoint = settings?.backendServerEndpoint ?: "http://127.0.0.1:8080"
@@ -128,9 +128,9 @@ fun LiveSwarmControlCenterView(
     var selectedAgentForDispatch by remember { mutableStateOf<SwarmAgentStatus?>(null) }
 
     val filteredAgents = when (selectedStatusFilter) {
-        "ACTIVE" -> swarmAgents.filter { it.status == "ACTIVE" || it.status == "RUNNING" }
-        "STANDBY" -> swarmAgents.filter { it.status == "STANDBY" || it.status == "IDLE" }
-        else -> swarmAgents
+        "ACTIVE" -> ultraAgents.filter { it.status == "ACTIVE" || it.status == "RUNNING" }
+        "STANDBY" -> ultraAgents.filter { it.status == "STANDBY" || it.status == "IDLE" }
+        else -> ultraAgents
     }
 
     LazyColumn(
@@ -143,10 +143,10 @@ fun LiveSwarmControlCenterView(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Operational Directive Entry", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("ULTRA Operational Directive Entry", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Direct multi-agent swarm connected to $activeEndpoint",
+                        "Single ULTRA agent (Gemini 4 Argon) connected to $activeEndpoint",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -155,7 +155,7 @@ fun LiveSwarmControlCenterView(
                         value = prompt,
                         onValueChange = onPromptChange,
                         modifier = Modifier.fillMaxWidth().height(110.dp).testTag("directive_prompt_input"),
-                        placeholder = { Text("Enter business idea, pivot directive, or automation request script...") },
+                        placeholder = { Text("Enter ULTRA creative, canvas, or Printify POD Pop-Up directive...") },
                         shape = RoundedCornerShape(8.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -166,7 +166,7 @@ fun LiveSwarmControlCenterView(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "Launch")
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("DEPLOY MULTI-AGENT SWARM")
+                        Text("EXECUTE ULTRA CYCLE")
                     }
                 }
             }
@@ -179,9 +179,9 @@ fun LiveSwarmControlCenterView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Live Infrastructure Swarm", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("ULTRA Single-Agent Engine", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        if (isLiveConnected) "Live Endpoint: $activeEndpoint/api/swarm" else "Local SQLite Engine ($activeEndpoint standby)",
+                        if (isLiveConnected) "Live Endpoint: $activeEndpoint" else "Local SQLite Engine ($activeEndpoint standby)",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -191,7 +191,7 @@ fun LiveSwarmControlCenterView(
                     color = (if (isLiveConnected) ProfitGreen else Color(0xFFF59E0B)).copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "${swarmAgents.size} Agents Online",
+                        text = "ULTRA Online (${ultraAgents.size})",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,

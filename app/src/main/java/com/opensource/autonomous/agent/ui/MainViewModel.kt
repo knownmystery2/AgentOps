@@ -612,16 +612,23 @@ open class MainViewModel(
         accountDebit: String = "5010 Cost of Goods Sold",
         accountCredit: String = "1010 Operating Cash Clearing",
         riskScore: Int = 15,
-        riskReason: String = "Custom authorization required."
+        riskReason: String = "Custom authorization required.",
+        printifyOrderId: String = "",
+        stripePaymentId: String = ""
     ) {
+        // Section 2B — Transaction Guard (enforced in code)
+        if (printifyOrderId.isBlank() || stripePaymentId.isBlank() || amountCents <= 0L) {
+            transactionApprovalStatusMessage.value = "[ULTRA] TRANSACTION BLOCKED — Cannot write transaction without real Printify order ID and real Stripe payment ID"
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
-            val code = "TX-REQ-" + (now % 100000)
+            val code = "TX-$printifyOrderId"
             val tx = PendingTransactionEntity(
-                id = "TX-APPR-" + UUID.randomUUID().toString().take(6).uppercase(),
+                id = "TX-$stripePaymentId",
                 transactionCode = code,
                 title = title,
-                description = description,
+                description = "$description [printifyOrderId=$printifyOrderId | stripePaymentId=$stripePaymentId]",
                 storeOrEntity = settings.value?.businessName ?: "Print Defy Studio",
                 platform = platform,
                 vendorOrPayee = vendorOrPayee,
@@ -635,7 +642,7 @@ open class MainViewModel(
                 createdAt = now
             )
             repository.insertPendingTransaction(tx)
-            transactionApprovalStatusMessage.value = "Registered new pending transaction $code ($${amountCents / 100.0})"
+            transactionApprovalStatusMessage.value = "[ULTRA] Real transaction recorded: $stripePaymentId ($${amountCents / 100.0})"
         }
     }
 
@@ -2012,30 +2019,16 @@ Output strictly JSON:
 
                 currentAiMockup.value = payload
 
-                // Automatically stage in POD Order queue
-                val podOrder = PodOrderEntity(
-                    id = "pod-ord-" + UUID.randomUUID().toString().take(8),
-                    sku = genSku,
-                    product = "Kritical Limitz - $title",
-                    color = garmentColorHex,
-                    placement = placementMatrix,
-                    status = "PENDING_STAGING",
-                    progressPercent = 100,
-                    vectorDpi = 300,
-                    customerEmail = "ops@kriticallimitz.printify.me",
-                    priceCents = 3800L,
-                    payloadJson = com.google.gson.Gson().toJson(payload),
-                    timestamp = now
-                )
-                repository.insertPodOrder(podOrder)
-
-                // Enqueue in Approval Register
+                // Section 2C — Design Approvals are NOT Transactions:
+                // Enqueue only in the Creative Approval Register (DecisionEntity) and Design Log (LogEntity).
+                // Never write to pod_orders or transaction ledger during design generation.
                 val decision = DecisionEntity(
                     id = UUID.randomUUID().toString(),
-                    agentSource = "Lead Autonomous Design Director AI (Kritical Limitz)",
-                    description = "Review KL Staged Mockup: '$title' [$38.00 | PENDING_STAGING]",
+                    agentSource = "ULTRA (Gemini 4 Argon)",
+                    description = "Review ULTRA Staged Design: '$title' ($genSku) [PENDING_STAGING]",
                     payloadJson = com.google.gson.Gson().toJson(mapOf(
                         "type" to "POD_DESIGN",
+                        "sku" to genSku,
                         "title" to title,
                         "conceptBreakdown" to conceptBreakdown,
                         "masterPrompt" to masterPrompt,
@@ -2048,16 +2041,15 @@ Output strictly JSON:
                 )
                 repository.insertDecision(decision)
 
-                // Log from Lead Autonomous Design Director AI
                 repository.insertLog(
                     LogEntity(
-                        agentId = "Lead Autonomous Design Director AI",
-                        message = "Engineered master-class design: '$title'. Staged in PENDING STAGING. Staging Tag: $stagingTag",
+                        agentId = "ULTRA",
+                        message = "[designLog] ULTRA engineered design '$title' ($genSku). Staged for creative approval. $stagingTag",
                         timestamp = now
                     )
                 )
 
-                aiMockupStatusMessage.value = "Master-class mockup engineered and staged: $title"
+                aiMockupStatusMessage.value = "ULTRA design placed — approve to publish ✓ ($title)"
             } catch (e: Exception) {
                 aiMockupStatusMessage.value = "Error generating mockup: ${e.message}"
             } finally {
