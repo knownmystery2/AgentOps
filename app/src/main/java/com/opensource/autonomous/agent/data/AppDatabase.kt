@@ -257,17 +257,17 @@ abstract class AppDatabase : RoomDatabase() {
                 keyStripe = if (!buildConfigStripe.startsWith("placeholder_")) buildConfigStripe else "",
                 keyStripePublishable = if (!buildConfigStripePub.startsWith("placeholder_")) buildConfigStripePub else "",
                 keyGemini = if (!buildConfigGemini.startsWith("placeholder_")) buildConfigGemini else "",
-                storefrontProvider = "GitHub Pages + Stripe",
+                storefrontProvider = "Printify POD Pop-Up Physical Storefront",
                 printifyShopDomain = "kriticallimitz.printify.me"
             )
             db.settingsDao().saveSettings(initialSettings)
 
-            // Seed Autonomous Storefront Location & Setup
+            // Seed Autonomous Storefront Location & Setup (Only one storefront is active: Printify POD Pop-Up)
             val defaultStorefront = StorefrontEntity(
                 id = "storefront-main",
                 companyName = "Kritical Limitz",
-                businessNiche = "Underground Luxury Streetwear (POD)",
-                platformType = "Printify Pop-Up Store + GitHub Pages Edge",
+                businessNiche = "Underground Luxury Streetwear (Physical POD Only)",
+                platformType = "Printify POD Pop-Up Physical Storefront",
                 status = "ACTIVE",
                 repoName = "kriticallimitz-storefront",
                 repoUrl = "https://kriticallimitz.printify.me",
@@ -276,7 +276,7 @@ abstract class AppDatabase : RoomDatabase() {
                 monthlyCostCents = 0L,
                 productsCount = 0,
                 complianceStatus = "VERIFIED_100_CLEAN",
-                setupLog = "Kritical Limitz POD Pop-Up Store online. Domain: kriticallimitz.printify.me. Strictly $0 COGS capital mandate active.",
+                setupLog = "Printify POD Pop-Up Physical Storefront online. Domain: kriticallimitz.printify.me. Physical POD garments only.",
                 createdAt = now
             )
             db.storefrontDao().insertStorefront(defaultStorefront)
@@ -285,8 +285,8 @@ abstract class AppDatabase : RoomDatabase() {
             val providers = listOf(
                 StandbyProviderEntity(
                     id = "prov-01",
-                    serviceName = "Google Gemini 2.5 Pro / Flash",
-                    tierType = "Server-Side Gemini API (Primary Core)",
+                    serviceName = "Google Gemini 4 Argon",
+                    tierType = "Paid Tier — Server-Side Gemini 4 Argon API (Primary Core)",
                     status = "ACTIVE",
                     quotaPercentUsed = 0,
                     accountAlias = "Gemini-Core-Engine",

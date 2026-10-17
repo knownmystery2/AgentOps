@@ -112,10 +112,10 @@ data class SettingsEntity(
     val bypassRateLimits: Boolean = false,
     val offlineSimulationMode: Boolean = false,
 
-    // 4. Per-Agent Model Customization (100% Open Source Models & Local Engine)
-    val modelCeo: String = "llama3:8b",
+    // 4. Per-Agent Model Customization (Gemini 4 Argon Paid + Open Source Models)
+    val modelCeo: String = "gemini-4-argon",
     val modelResearch: String = "llama3:8b",
-    val modelProduct: String = "mistral:7b",
+    val modelProduct: String = "gemini-4-argon",
     val modelMarketing: String = "llama3:8b",
     val modelContent: String = "mistral:7b",
     val modelSupport: String = "mistral:7b",

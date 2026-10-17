@@ -1188,9 +1188,9 @@ private fun AddArtDesignPanel(
             }
         }
 
-        // 3. AI Design Director Synthesis
+        // 3. AI Design Director Synthesis (Gemini 4 Argon)
         Spacer(modifier = Modifier.height(4.dp))
-        Text("AI Design Director Synthesis", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("AI Design Director Synthesis (Gemini 4 Argon)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
         OutlinedTextField(
             value = aiPromptInput,
             onValueChange = { aiPromptInput = it },

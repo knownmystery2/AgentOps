@@ -4,7 +4,7 @@ import { interceptAction } from './godInterceptor.js'; // The Interceptor Archit
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
-const CORE_MODEL = 'gemini-2.5-flash'; // Free tier - 15 req/min, 1M tokens/day
+const CORE_MODEL = 'gemini-4-argon'; // Paid tier — Gemini 4 Argon (sole paid component in build)
 
 // Mock database to hold assets needing your approval
 let approvalDashboardQueue = [];

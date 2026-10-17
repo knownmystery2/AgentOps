@@ -91,12 +91,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var offlineSimulationMode by remember(currentSettings) { mutableStateOf(currentSettings?.offlineSimulationMode ?: false) }
 
     // Per-Agent Models
-    var modelCeo by remember(currentSettings) { mutableStateOf(currentSettings?.modelCeo ?: "gemini-2.5-flash") }
+    var modelCeo by remember(currentSettings) { mutableStateOf(currentSettings?.modelCeo ?: "gemini-4-argon") }
     var modelResearch by remember(currentSettings) { mutableStateOf(currentSettings?.modelResearch ?: "llama-3-70b") }
-    var modelProduct by remember(currentSettings) { mutableStateOf(currentSettings?.modelProduct ?: "mistral-large") }
+    var modelProduct by remember(currentSettings) { mutableStateOf(currentSettings?.modelProduct ?: "gemini-4-argon") }
     var modelMarketing by remember(currentSettings) { mutableStateOf(currentSettings?.modelMarketing ?: "llama-3-8b") }
     var modelContent by remember(currentSettings) { mutableStateOf(currentSettings?.modelContent ?: "groq-mixtral") }
-    var modelSupport by remember(currentSettings) { mutableStateOf(currentSettings?.modelSupport ?: "gemini-2.5-flash") }
+    var modelSupport by remember(currentSettings) { mutableStateOf(currentSettings?.modelSupport ?: "gemini-4-argon") }
     var modelFinance by remember(currentSettings) { mutableStateOf(currentSettings?.modelFinance ?: "deepseek-coder") }
 
     // 4. Storefront & eCommerce State

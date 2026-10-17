@@ -50,7 +50,7 @@ data class BusinessOperationsAnalysis(
     val riskAssessment: String = "No critical compliance anomalies detected. Zero upfront cost verified.",
     val immediateNextStep: String = "Review and dispatch top-priority agent tasks.",
     val timestamp: Long = System.currentTimeMillis(),
-    val modelUsed: String = "gemini-3.5-flash"
+    val modelUsed: String = "gemini-4-argon"
 )
 
 /**
@@ -79,7 +79,7 @@ class BusinessOperationsGeminiRepository(
     private val context: Context? = null
 ) {
     private val gson = Gson()
-    private val defaultModelName = "gemini-3.5-flash"
+    private val defaultModelName = "gemini-4-argon"
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -277,11 +277,11 @@ Respond strictly in JSON adhering to the specified schema.
         var rawJsonText = attemptGeminiCall(modelName)
         var usedModel = modelName
 
-        if (rawJsonText.isNullOrBlank() && modelName != "gemini-2.5-flash") {
-            Log.i(TAG, "Attempting fallback to gemini-2.5-flash...")
-            rawJsonText = attemptGeminiCall("gemini-2.5-flash")
+        if (rawJsonText.isNullOrBlank() && modelName != "gemini-4-argon") {
+            Log.i(TAG, "Attempting fallback to gemini-4-argon...")
+            rawJsonText = attemptGeminiCall("gemini-4-argon")
             if (!rawJsonText.isNullOrBlank()) {
-                usedModel = "gemini-2.5-flash"
+                usedModel = "gemini-4-argon"
             }
         }
 
@@ -701,7 +701,7 @@ Respond strictly in JSON adhering to the specified schema.
             riskAssessment = "Zero financial exposure confirmed. All operations adhere to $0 upfront cost mandate.",
             immediateNextStep = "Dispatch proposed tasks to autonomous agent swarm or standby pool.",
             timestamp = System.currentTimeMillis(),
-            modelUsed = "gemini-2.5-flash (Local Heuristic Fallback)"
+            modelUsed = "gemini-4-argon (Local Heuristic Fallback)"
         )
     }
 

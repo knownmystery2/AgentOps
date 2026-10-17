@@ -1714,7 +1714,7 @@ fun DashboardScreen(
                             color = BrandEmerald.copy(alpha = 0.15f)
                         ) {
                             Text(
-                                text = "GEMINI 2.5/3.5",
+                                text = "GEMINI 4 ARGON",
                                 color = BrandEmerald,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp,

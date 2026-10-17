@@ -87,7 +87,7 @@ class MultiAgentSwarmCluster(
         .readTimeout(20, TimeUnit.SECONDS)
         .build()
 
-    private val coreModel = "gemini-2.5-pro"
+    private val coreModel = "gemini-4-argon"
 
     private val forbiddenTrademarks = listOf(
         "nike", "adidas", "gucci", "disney", "marvel", "star wars",
@@ -743,7 +743,7 @@ Output strictly valid JSON with these exact fields:
     }
 
     /**
-     * Direct REST call to Gemini 2.5 Pro / Flash with timeout and error resilience
+     * Direct REST call to Gemini 4 Argon (gemini-4-argon) with timeout and error resilience
      */
     private suspend fun callGeminiApi(prompt: String): String? = withContext(Dispatchers.IO) {
         val apiKey = secretManager.getGeminiApiKey().trim()

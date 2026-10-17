@@ -100,7 +100,7 @@ fun PodMockupScreen(
                         color = BrandEmerald.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            text = "Lead Design Director AI • Agent #4",
+                            text = "Lead Design Director AI • Gemini 4 Argon",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = BrandEmerald,
@@ -285,7 +285,7 @@ fun PodMockupScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BrandEmerald, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Lead Autonomous Design Director AI", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text("Lead Autonomous Design Director AI (Gemini 4 Argon)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         }
                         Surface(
                             shape = RoundedCornerShape(4.dp),

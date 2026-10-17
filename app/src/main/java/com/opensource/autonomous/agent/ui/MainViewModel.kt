@@ -314,7 +314,7 @@ open class MainViewModel(
                     name = agent.name,
                     role = agent.role,
                     status = if (activeTask?.status == "RUNNING") "ACTIVE" else "STANDBY",
-                    model = "llama3",
+                    model = "gemini-4-argon",
                     currentTask = activeTask?.title ?: "Standing by for business directive",
                     lastPingTimestamp = now,
                     latencyMs = 12
@@ -1960,7 +1960,7 @@ Output strictly JSON:
 
                 if (apiKey.isNotBlank()) {
                     try {
-                        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+                        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-argon:generateContent?key=$apiKey"
                         val jsonReq = """
                             {
                                 "contents": [{"parts": [{"text": ${com.google.gson.Gson().toJson(promptForAi)}}]}],

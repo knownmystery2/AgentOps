@@ -49,12 +49,12 @@
 ### Category 4: Per-Agent AI Model Matrix (Free Tier & Local)
 | Key / Field | Type | Default Value | Description | Storage Layer |
 |---|---|---|---|---|
-| `modelCeo` | String | "gemini-2.5-flash" | Strategic orchestration and priority ranking | Room (`business_settings`) |
+| `modelCeo` | String | "gemini-4-argon" | Strategic orchestration and priority ranking | Room (`business_settings`) |
 | `modelResearch` | String | "llama-3-70b" | Market trend and digital product ideation | Room (`business_settings`) |
-| `modelProduct` | String | "mistral-large" | Digital product bundling and format packaging | Room (`business_settings`) |
+| `modelProduct` | String | "gemini-4-argon" | Digital product bundling and POD design director | Room (`business_settings`) |
 | `modelMarketing` | String | "llama-3-8b" | Copywriting, storefront headlines, tags | Room (`business_settings`) |
 | `modelContent` | String | "groq-mixtral" | High-speed asset and code snippet generation | Room (`business_settings`) |
-| `modelSupport` | String | "gemini-2.5-flash" | Customer FAQ and automated returns handling | Room (`business_settings`) |
+| `modelSupport` | String | "gemini-4-argon" | Customer FAQ and automated returns handling | Room (`business_settings`) |
 | `modelFinance` | String | "deepseek-coder" | Whole-cent double-entry ledger audits | Room (`business_settings`) |
 
 ### Category 5: Storefront & Zero-Cost eCommerce

@@ -378,7 +378,7 @@ data class AutonomousAgent(
                 name = "GOD",
                 role = OperationalRole.GOD_OVERSEER,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "gemini-2.5-pro (Interceptor)",
+                modelEngine = "gemini-4-argon (Interceptor)",
                 currentTask = "Silent surveillance: Intercepting live actions before execution",
                 capabilities = listOf("ABSOLUTE_VETO", "PROMPT_INJECTION_SHIELD", "FAIL_SAFE_HALT", "ROGUE_KEY_BLOCK", "ZERO_COST_GUARD")
             ),
@@ -415,9 +415,9 @@ data class AutonomousAgent(
                 name = "Lead Autonomous Design Director AI",
                 role = OperationalRole.PRODUCT_DESIGNER_POD,
                 status = AgentStatus.ACTIVE,
-                modelEngine = "mistral:7b",
+                modelEngine = "gemini-4-argon",
                 systemPrompt = AgentPrompts.KRITICAL_LIMITZ_POD_DESIGN_DIRECTOR_PROMPT,
-                currentTask = "Engineering Kritical Limitz master-class 300 DPI luxury underground streetwear mockups",
+                currentTask = "Engineering Kritical Limitz master-class 300 DPI luxury underground streetwear mockups via Gemini 4 Argon",
                 capabilities = listOf("LUXURY_UNDERGROUND_POD", "VECTOR_SYNTHESIS", "MOCKUP_MAPPING", "BLEED_VALIDATION", "PENDING_STAGING_ENFORCEMENT")
             ),
             AutonomousAgent(

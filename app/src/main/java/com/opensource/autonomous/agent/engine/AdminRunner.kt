@@ -110,7 +110,7 @@ class AdminRunner(
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val coreModel = "gemini-2.5-pro"
+    private val coreModel = "gemini-4-argon"
 
     private val _runnerState = MutableStateFlow(AdminRunnerState())
     val runnerState: StateFlow<AdminRunnerState> = _runnerState.asStateFlow()
@@ -210,7 +210,7 @@ CRITICAL OPERATIONAL RULES:
                 isRunning = true,
                 currentPhase = "APP_START_INITIALIZATION",
                 lastActionMessage = "🚀 Receiving 'APP_START' initialization payload. Overseeing software state and real-time streams...",
-                nextStep = "Prompting Gemini 2.5 Pro with APP_START payload and bound tools"
+                nextStep = "Prompting Gemini 4 Argon with APP_START payload and bound tools"
             )
 
             logManagerStatus("AdminRunner received APP_START. Autonomous head manager taking control.")
@@ -237,7 +237,7 @@ CRITICAL OPERATIONAL RULES:
                     _runnerState.value = _runnerState.value.copy(
                         isRunning = false,
                         currentPhase = "OPERATIONAL_STABLE",
-                        lastActionMessage = "Autonomous loop completed via Gemini 2.5 Pro controller. Live transaction monitor active.",
+                        lastActionMessage = "Autonomous loop completed via Gemini 4 Argon controller. Live transaction monitor active.",
                         nextStep = "Monitoring live transactions and open-source webhook streams",
                         streamHealth = updatedState.streamHealth,
                         liveActivityMarkdown = updatedState.recentActivityMarkdown
@@ -281,7 +281,7 @@ CRITICAL OPERATIONAL RULES:
                 iteration++
                 _runnerState.value = _runnerState.value.copy(
                     currentPhase = "AI_STUDIO_INSPECTION_ITERATION_$iteration",
-                    lastActionMessage = "📡 Sending state to Gemini 2.5 Pro (Iteration $iteration)...",
+                    lastActionMessage = "📡 Sending state to Gemini 4 Argon (Iteration $iteration)...",
                     nextStep = "Awaiting function call response from Gemini"
                 )
 
