@@ -409,12 +409,12 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Multi-Agent Swarm Cluster",
+                                    text = "ULTRA Autonomous Agent",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "4-Role Autonomous Collaboration Loop",
+                                    text = "Single-Agent Pipeline • 8 Aesthetic Systems • 6 Laws",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = BrandEmerald
                                 )
@@ -434,7 +434,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isSwarmRunning) "Swarm Active" else "Swarm Ready",
+                                    text = if (isSwarmRunning) "ULTRA Active" else "ULTRA Ready",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSwarmRunning) Color(0xFFF59E0B) else ProfitGreen
@@ -466,8 +466,8 @@ fun DashboardScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // The 4 Swarm Roles (Who Talks to Whom)
-                    Text(text = "Swarm Handoff Pipeline:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    // ULTRA 4-Stage Pipeline
+                    Text(text = "ULTRA 4-Stage Pipeline:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
@@ -475,13 +475,13 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        SwarmRolePill("1. Administrator AI", "The Boss / Orchestrator", Icons.Default.AdminPanelSettings, BrandEmerald)
+                        SwarmRolePill("1. Prompt Synthesis", "Gemini 4 Argon Master Prompt", Icons.Default.AutoAwesome, BrandEmerald)
                         Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                        SwarmRolePill("2. Trend & Identity", "Theme & 5 Concepts", Icons.Default.TrendingUp, Color(0xFF38BDF8))
+                        SwarmRolePill("2. 300 DPI Render", "FLUX.1-schnell + BG Removal", Icons.Default.Palette, Color(0xFF38BDF8))
                         Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                        SwarmRolePill("3. Creative Design", "Visual Prompts & Copy", Icons.Default.Palette, Color(0xFFA855F7))
+                        SwarmRolePill("3. Printify Staging", "Pending Human Review", Icons.Default.Checkroom, Color(0xFFA855F7))
                         Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                        SwarmRolePill("4. Legal Compliance", "Strict Trademark Filter", Icons.Default.Gavel, ProfitGreen)
+                        SwarmRolePill("4. Verified Ledger", "Printify + Stripe Guard", Icons.Default.Gavel, ProfitGreen)
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -521,11 +521,11 @@ fun DashboardScreen(
                             if (isSwarmRunning) {
                                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Collaborating...", fontSize = 12.sp)
+                                Text("Executing ULTRA...", fontSize = 12.sp)
                             } else {
                                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Run Swarm Loop", fontSize = 12.sp)
+                                Text("Run ULTRA Cycle", fontSize = 12.sp)
                             }
                         }
 
@@ -604,12 +604,12 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Autonomous Swarm Operations Fleet",
+                                    text = "ULTRA Single-Agent Engine",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "11 Business Roles • Active / Standby State Matrix",
+                                    text = "Consolidated Autonomous POD & Storefront Operator",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

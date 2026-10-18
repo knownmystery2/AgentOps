@@ -135,7 +135,7 @@ open class MainViewModel(
 
     val swarmCluster = com.opensource.autonomous.agent.engine.MultiAgentSwarmCluster(db, repository, secretManager)
     val isSwarmRunning = MutableStateFlow(false)
-    val swarmStatusMessage = MutableStateFlow<String?>("Multi-Agent Swarm Cluster Online (11 Agents Active)")
+    val swarmStatusMessage = MutableStateFlow<String?>("ULTRA Autonomous Agent Online (Gemini 4 Argon)")
     val activeStoreTheme = MutableStateFlow<String?>("Pop-Up Store Awaiting Directive")
     val marketingPackages = MutableStateFlow<Map<String, com.opensource.autonomous.agent.engine.SwarmMarketingPackage>>(emptyMap())
 
@@ -1216,7 +1216,7 @@ open class MainViewModel(
     fun autoStartSwarmCluster(customNiche: String? = null) {
         if (isSwarmRunning.value) return
         isSwarmRunning.value = true
-        swarmStatusMessage.value = "Swarm Cluster running: Administrator delegating to Trend Agent..."
+        swarmStatusMessage.value = "ULTRA Agent running: Executing autonomous design & storefront pipeline..."
         viewModelScope.launch {
             try {
                 val result = swarmCluster.autoStartAICrashLoop(customNiche)
@@ -1224,12 +1224,12 @@ open class MainViewModel(
                     val prods = result.getOrNull() ?: emptyList()
                     val theme = prods.firstOrNull()?.niche ?: "Trending Pop-Up Store"
                     activeStoreTheme.value = theme
-                    swarmStatusMessage.value = "Swarm loop complete! ${prods.size} unique products created & trademark verified."
+                    swarmStatusMessage.value = "ULTRA cycle complete! ${prods.size} unique products created & trademark verified."
                 } else {
-                    swarmStatusMessage.value = "Swarm note: ${result.exceptionOrNull()?.message}"
+                    swarmStatusMessage.value = "ULTRA note: ${result.exceptionOrNull()?.message}"
                 }
             } catch (e: Exception) {
-                swarmStatusMessage.value = "Swarm notice: ${e.localizedMessage}"
+                swarmStatusMessage.value = "ULTRA notice: ${e.localizedMessage}"
             } finally {
                 isSwarmRunning.value = false
             }
@@ -1270,7 +1270,7 @@ open class MainViewModel(
             podQueue.value = emptyList()
             marketingPackages.value = emptyMap()
             activeStoreTheme.value = "Live Operating Mode"
-            swarmStatusMessage.value = "All demo data removed. 11 Agents Active for live business."
+            swarmStatusMessage.value = "All demo data removed. ULTRA Agent Active for live business."
         }
     }
 
